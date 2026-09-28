@@ -1,4 +1,4 @@
-import { Paperclip, SendHorizontal } from "lucide-react";
+import { Loader2, Paperclip, SendHorizontal } from "lucide-react";
 import { type KeyboardEvent, useCallback, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -8,6 +8,7 @@ interface ChatInputProps {
 	onUpload: (file: File) => void;
 	disabled: boolean;
 	hasDocument: boolean;
+	uploading: boolean;
 }
 
 export function ChatInput({
@@ -15,6 +16,7 @@ export function ChatInput({
 	onUpload,
 	disabled,
 	hasDocument,
+	uploading,
 }: ChatInputProps) {
 	const [value, setValue] = useState("");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -71,10 +73,21 @@ export function ChatInput({
 								variant="ghost"
 								size="icon"
 								className="h-8 w-8 flex-shrink-0"
-								disabled={hasDocument}
+								disabled={hasDocument || uploading}
+								aria-label={
+									uploading
+										? "Uploading document"
+										: hasDocument
+											? "Document already uploaded"
+											: "Attach a PDF"
+								}
 								onClick={() => fileInputRef.current?.click()}
 							>
-								<Paperclip className="h-4 w-4 text-neutral-500" />
+								{uploading ? (
+									<Loader2 className="h-4 w-4 animate-spin text-neutral-500" />
+								) : (
+									<Paperclip className="h-4 w-4 text-neutral-500" />
+								)}
 							</Button>
 						</div>
 					</TooltipTrigger>
@@ -108,6 +121,7 @@ export function ChatInput({
 					size="icon"
 					className="h-8 w-8 flex-shrink-0"
 					disabled={!value.trim() || disabled}
+					aria-label="Send message"
 					onClick={handleSend}
 				>
 					<SendHorizontal

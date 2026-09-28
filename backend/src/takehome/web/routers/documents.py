@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 
 from takehome.db.session import get_session
-from takehome.services.conversation import get_conversation
+from takehome.services.conversation import get_conversation, touch_conversation
 from takehome.services.document import get_document, upload_document
 
 logger = structlog.get_logger()
@@ -28,6 +28,7 @@ class DocumentOut(BaseModel):
     conversation_id: str
     filename: str
     page_count: int
+    has_text: bool
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
@@ -66,6 +67,8 @@ async def upload_document_endpoint(
             raise HTTPException(status_code=409, detail=error_message)
         raise HTTPException(status_code=400, detail=error_message)
 
+    await touch_conversation(session, conversation_id)
+
     logger.info(
         "Document uploaded",
         conversation_id=conversation_id,
@@ -78,6 +81,7 @@ async def upload_document_endpoint(
         conversation_id=document.conversation_id,
         filename=document.filename,
         page_count=document.page_count,
+        has_text=document.extracted_text is not None,
         uploaded_at=document.uploaded_at,
     )
 

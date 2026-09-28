@@ -1,4 +1,10 @@
-import { ChevronLeft, ChevronRight, FileText, Loader2 } from "lucide-react";
+import {
+	AlertTriangle,
+	ChevronLeft,
+	ChevronRight,
+	FileText,
+	Loader2,
+} from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { Document as PDFDocument, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -28,6 +34,17 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 	const [width, setWidth] = useState(DEFAULT_WIDTH);
 	const [dragging, setDragging] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
+
+	// Start each document fresh: otherwise switching from page 7 of one
+	// document to a 3-page one requests a page that doesn't exist.
+	const [shownDocumentId, setShownDocumentId] = useState(document?.id);
+	if (document?.id !== shownDocumentId) {
+		setShownDocumentId(document?.id);
+		setCurrentPage(1);
+		setNumPages(0);
+		setPdfLoading(true);
+		setPdfError(null);
+	}
 
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
@@ -100,6 +117,16 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 				</div>
 			</div>
 
+			{!document.has_text && (
+				<div className="flex gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+					<AlertTriangle className="mt-px h-3.5 w-3.5 flex-shrink-0" />
+					<p>
+						No selectable text found, so this is probably a scan. The assistant
+						can't read it; upload a text-based PDF to ask questions about it.
+					</p>
+				</div>
+			)}
+
 			{/* PDF content */}
 			<div className="flex-1 overflow-y-auto p-4">
 				{pdfError && (
@@ -147,6 +174,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 						size="icon"
 						className="h-7 w-7"
 						disabled={currentPage <= 1}
+						aria-label="Previous page"
 						onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
 					>
 						<ChevronLeft className="h-4 w-4" />
@@ -159,6 +187,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 						size="icon"
 						className="h-7 w-7"
 						disabled={currentPage >= numPages}
+						aria-label="Next page"
 						onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
 					>
 						<ChevronRight className="h-4 w-4" />

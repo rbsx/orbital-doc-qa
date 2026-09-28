@@ -20,6 +20,7 @@ export interface Document {
 	conversation_id: string;
 	filename: string;
 	page_count: number;
+	has_text: boolean;
 	uploaded_at: string;
 }
 

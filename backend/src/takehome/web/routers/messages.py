@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator
 from datetime import datetime
@@ -13,7 +14,11 @@ from starlette.responses import StreamingResponse
 
 from takehome.db.models import Message
 from takehome.db.session import get_session
-from takehome.services.conversation import get_conversation, update_conversation
+from takehome.services.conversation import (
+    get_conversation,
+    touch_conversation,
+    update_conversation,
+)
 from takehome.services.document import get_document_for_conversation
 from takehome.services.llm import chat_with_document, count_sources_cited, generate_title
 
@@ -103,6 +108,7 @@ async def send_message(
     session.add(user_message)
     await session.commit()
     await session.refresh(user_message)
+    await touch_conversation(session, conversation_id)
 
     logger.info("User message saved", conversation_id=conversation_id, message_id=user_message.id)
 
@@ -131,12 +137,17 @@ async def send_message(
     async def event_stream() -> AsyncIterator[str]:
         """Generate SSE events with the streamed LLM response."""
         full_response = ""
+        # The title only depends on the user's message, so generate it alongside
+        # the answer instead of after it, where it kept the input locked for an
+        # extra model round-trip.
+        title_task = asyncio.create_task(generate_title(body.content)) if is_first_message else None
 
         try:
             async for chunk in chat_with_document(
                 user_message=body.content,
                 document_text=document_text,
                 conversation_history=conversation_history,
+                has_document=document is not None,
             ):
                 full_response += chunk
                 event_data = json.dumps({"type": "content", "content": chunk})
@@ -171,9 +182,9 @@ async def send_message(
             await save_session.refresh(assistant_message)
 
             # Auto-generate title from first user message
-            if is_first_message:
+            if title_task is not None:
                 try:
-                    title = await generate_title(body.content)
+                    title = await title_task
                     await update_conversation(save_session, conversation_id, title)
                     logger.info(
                         "Auto-generated conversation title",
