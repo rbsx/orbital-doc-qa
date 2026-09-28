@@ -71,6 +71,8 @@ The full diff against the starting code: [`851ccdd...main`](https://github.com/r
 6. [#6](https://github.com/rbsx/orbital-doc-qa/pull/6) Chats named after their first document, suggested questions, the all-clear notice, citation quality
 7. [#7](https://github.com/rbsx/orbital-doc-qa/pull/7) Removing documents with stable labels, alignment, resilience to a failed load
 8. [#8](https://github.com/rbsx/orbital-doc-qa/pull/8) Confirmation before removing a document
+9. [#9](https://github.com/rbsx/orbital-doc-qa/pull/9) README and this document
+10. [#10](https://github.com/rbsx/orbital-doc-qa/pull/10) Two citation-matching gaps found by running the README demo on a fresh clone
 
 ## Known limitations
 

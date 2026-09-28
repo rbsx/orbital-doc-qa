@@ -15,7 +15,7 @@ Plus a pass over the rough edges a lawyer would hit first:
 - **Additions:** suggested first questions, accessibility and a cleaner new-chat flow.
 
 **Why these, what I'd do next, and how I worked with AI (including parallel subagents): [DECISIONS.md](DECISIONS.md).**
-Everything landed as eight small PRs ([#1](https://github.com/rbsx/orbital-doc-qa/pull/1)–[#8](https://github.com/rbsx/orbital-doc-qa/pull/8)); full diff from the starting code: [`851ccdd...main`](https://github.com/rbsx/orbital-doc-qa/compare/851ccdd...main).
+Everything landed as small PRs ([#1](https://github.com/rbsx/orbital-doc-qa/pull/1)–[#10](https://github.com/rbsx/orbital-doc-qa/pull/10)); full diff from the starting code: [`851ccdd...main`](https://github.com/rbsx/orbital-doc-qa/compare/851ccdd...main).
 
 ## Try it in 60 seconds
 
