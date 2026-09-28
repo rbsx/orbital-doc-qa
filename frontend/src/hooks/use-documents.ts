@@ -15,6 +15,7 @@ export interface PendingUpload {
 }
 
 export function useDocuments(conversationId: string | null) {
+	const currentId = conversationId;
 	const [documents, setDocuments] = useState<Document[]>([]);
 	const [pending, setPending] = useState<PendingUpload[]>([]);
 	const [error, setError] = useState<string | null>(null);
@@ -35,16 +36,24 @@ export function useDocuments(conversationId: string | null) {
 		setError(null);
 	}
 
+	// Bumped by every refresh and upload; a refresh only applies its result if
+	// nothing newer started meanwhile (e.g. the first upload into a brand-new
+	// chat, which starts while that chat's initial load is still in flight).
+	const versionRef = useRef(0);
+
 	const refresh = useCallback(async () => {
 		if (!conversationId) {
 			setDocuments([]);
 			return;
 		}
 		const isActive = () => activeIdRef.current === conversationId;
+		const version = ++versionRef.current;
 		try {
 			setError(null);
 			const detail = await api.fetchConversation(conversationId);
-			if (isActive()) setDocuments(detail.documents);
+			if (isActive() && versionRef.current === version) {
+				setDocuments(detail.documents);
+			}
 		} catch (err) {
 			if (isActive()) {
 				setError(
@@ -62,10 +71,18 @@ export function useDocuments(conversationId: string | null) {
 	 * Upload files as separate requests so each gets its own progress and error.
 	 * `onUploaded` runs for each document that arrives while its conversation is
 	 * still the one on screen. Resolves when every file has finished.
+	 * `targetId` lets a just-created conversation receive files before this
+	 * hook has re-rendered with it selected.
 	 */
 	const upload = useCallback(
-		(files: File[], onUploaded?: (document: Document) => void) => {
+		(
+			files: File[],
+			onUploaded?: (document: Document) => void,
+			targetId?: string,
+		) => {
+			const conversationId = targetId ?? currentId;
 			if (!conversationId || files.length === 0) return queueRef.current;
+			versionRef.current++;
 			const isActive = () => activeIdRef.current === conversationId;
 			const batch = files.map((file) => ({
 				file,
@@ -119,7 +136,7 @@ export function useDocuments(conversationId: string | null) {
 			queueRef.current = queueRef.current.then(run);
 			return queueRef.current;
 		},
-		[conversationId],
+		[currentId],
 	);
 
 	const dismiss = useCallback((key: string) => {

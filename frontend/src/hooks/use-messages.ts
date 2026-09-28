@@ -3,6 +3,7 @@ import * as api from "../lib/api";
 import type { Message } from "../types";
 
 export function useMessages(conversationId: string | null) {
+	const currentId = conversationId;
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -13,6 +14,12 @@ export function useMessages(conversationId: string | null) {
 	const activeIdRef = useRef(conversationId);
 	activeIdRef.current = conversationId;
 	const controllersRef = useRef(new Set<AbortController>());
+	// A refresh must not overwrite a conversation whose reply is in flight: its
+	// result may predate the question (e.g. the initial load of a brand-new chat
+	// racing its first message). The send reloads when it finishes. The version
+	// covers the other order, a refresh that started before the send.
+	const versionRef = useRef(0);
+	const sendingRef = useRef(new Set<string>());
 
 	const refresh = useCallback(async () => {
 		if (!conversationId) {
@@ -20,11 +27,15 @@ export function useMessages(conversationId: string | null) {
 			return;
 		}
 		const isActive = () => activeIdRef.current === conversationId;
+		const version = ++versionRef.current;
 		try {
 			setLoading(true);
 			setError(null);
 			const data = await api.fetchMessages(conversationId);
-			if (isActive()) setMessages(data);
+			const current =
+				versionRef.current === version &&
+				!sendingRef.current.has(conversationId);
+			if (isActive() && current) setMessages(data);
 		} catch (err) {
 			if (isActive()) {
 				setError(
@@ -48,8 +59,13 @@ export function useMessages(conversationId: string | null) {
 	}, []);
 
 	const send = useCallback(
-		async (content: string) => {
+		// `targetId` lets a just-created conversation receive its first message
+		// before this hook has re-rendered with it selected.
+		async (content: string, targetId?: string) => {
+			const conversationId = targetId ?? currentId;
 			if (!conversationId || conversationId in streams) return;
+			versionRef.current++;
+			sendingRef.current.add(conversationId);
 			const isActive = () => activeIdRef.current === conversationId;
 			const setStreamingContent = (text: string) =>
 				setStreams((prev) => ({ ...prev, [conversationId]: text }));
@@ -160,10 +176,11 @@ export function useMessages(conversationId: string | null) {
 				}
 			} finally {
 				controllersRef.current.delete(controller);
+				sendingRef.current.delete(conversationId);
 				setStreams(({ [conversationId]: _done, ...rest }) => rest);
 			}
 		},
-		[conversationId, streams],
+		[currentId, streams],
 	);
 
 	const streamingContent =

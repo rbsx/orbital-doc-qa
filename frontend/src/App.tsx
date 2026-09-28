@@ -63,33 +63,46 @@ export default function App() {
 		[activeDocumentId],
 	);
 
+	// A new chat only becomes a conversation once something is asked or
+	// uploaded, so abandoned "New chat" clicks don't pile up in the sidebar.
+	const ensureConversation = useCallback(
+		async () => selectedId ?? (await create())?.id ?? null,
+		[selectedId, create],
+	);
+
 	const handleSend = useCallback(
 		async (content: string) => {
-			await send(content);
+			const conversationId = await ensureConversation();
+			if (!conversationId) return;
+			await send(content, conversationId);
 			refreshConversations();
 		},
-		[send, refreshConversations],
+		[ensureConversation, send, refreshConversations],
 	);
 
 	const handleUpload = useCallback(
 		async (files: File[]) => {
+			const conversationId = await ensureConversation();
+			if (!conversationId) return;
 			// Show the first new document as soon as it arrives; the rest of the
 			// batch lands in the file panel without pulling the viewer around.
 			let opened = false;
-			await upload(files, (document) => {
-				if (opened) return;
-				opened = true;
-				openSource({ documentId: document.id, page: 1 });
-			});
+			await upload(
+				files,
+				(document) => {
+					if (opened) return;
+					opened = true;
+					openSource({ documentId: document.id, page: 1 });
+				},
+				conversationId,
+			);
 			// Picks up the new document counts and the conversation's new position.
 			refreshConversations();
 		},
-		[upload, openSource, refreshConversations],
+		[ensureConversation, upload, openSource, refreshConversations],
 	);
 
-	const handleCreate = useCallback(async () => {
-		await create();
-	}, [create]);
+	const handleNewChat = useCallback(() => select(null), [select]);
 
 	return (
 		<TooltipProvider delayDuration={200}>
@@ -99,7 +112,7 @@ export default function App() {
 					selectedId={selectedId}
 					loading={conversationsLoading}
 					onSelect={select}
-					onCreate={handleCreate}
+					onCreate={handleNewChat}
 					onDelete={remove}
 				/>
 
