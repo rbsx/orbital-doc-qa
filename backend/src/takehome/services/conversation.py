@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import os
+import re
 
 import structlog
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from takehome.db.models import Conversation
+from takehome.db.models import DEFAULT_CONVERSATION_TITLE, Conversation, Message
 
 logger = structlog.get_logger()
 
@@ -68,6 +69,32 @@ async def touch_conversation(session: AsyncSession, conversation_id: str) -> Non
         .values(updated_at=func.now())
     )
     await session.commit()
+
+
+def title_from_filename(filename: str) -> str:
+    """ "02-report-on-title-100-bishopsgate.pdf" -> "Report on title 100 bishopsgate"."""
+    stem = re.sub(r"\.pdf$", "", filename, flags=re.IGNORECASE)
+    stem = re.sub(r"^\d{1,3}[\s_.-]+", "", stem)  # ordering prefixes, not years
+    title = " ".join(re.sub(r"[-_.]+", " ", stem).split()) or filename
+    return (title[0].upper() + title[1:])[:100]
+
+
+async def title_from_first_document(
+    session: AsyncSession, conversation_id: str, filename: str
+) -> None:
+    """Name a still-untitled chat after its first document.
+
+    Only until the first question: that generates a title describing what the
+    lawyer is actually asking about, which is more useful.
+    """
+    conversation = await get_conversation(session, conversation_id)
+    if conversation is None or conversation.title != DEFAULT_CONVERSATION_TITLE:
+        return
+    has_messages = await session.scalar(
+        select(Message.id).where(Message.conversation_id == conversation_id).limit(1)
+    )
+    if has_messages is None:
+        await update_conversation(session, conversation_id, title_from_filename(filename))
 
 
 async def delete_conversation(session: AsyncSession, conversation_id: str) -> bool:

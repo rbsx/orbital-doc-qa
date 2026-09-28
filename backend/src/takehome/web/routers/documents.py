@@ -12,7 +12,11 @@ from starlette.responses import FileResponse
 
 from takehome.db.models import Document
 from takehome.db.session import get_session
-from takehome.services.conversation import get_conversation, touch_conversation
+from takehome.services.conversation import (
+    get_conversation,
+    title_from_first_document,
+    touch_conversation,
+)
 from takehome.services.document import (
     PasswordProtectedError,
     get_document,
@@ -96,6 +100,7 @@ async def upload_document_endpoint(
         raise HTTPException(status_code=400, detail=str(e))
 
     await touch_conversation(session, conversation_id)
+    await title_from_first_document(session, conversation_id, document.filename)
 
     logger.info(
         "Document uploaded",
