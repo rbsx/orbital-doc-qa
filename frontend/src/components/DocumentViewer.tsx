@@ -1,4 +1,10 @@
-import { ChevronLeft, ChevronRight, FileText, Loader2 } from "lucide-react";
+import {
+	AlertTriangle,
+	ChevronLeft,
+	ChevronRight,
+	FileText,
+	Loader2,
+} from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { Document as PDFDocument, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -110,6 +116,16 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 					</p>
 				</div>
 			</div>
+
+			{!document.has_text && (
+				<div className="flex gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+					<AlertTriangle className="mt-px h-3.5 w-3.5 flex-shrink-0" />
+					<p>
+						No selectable text found, so this is probably a scan. The assistant
+						can't read it; upload a text-based PDF to ask questions about it.
+					</p>
+				</div>
+			)}
 
 			{/* PDF content */}
 			<div className="flex-1 overflow-y-auto p-4">

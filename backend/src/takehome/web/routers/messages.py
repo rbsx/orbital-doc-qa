@@ -137,6 +137,7 @@ async def send_message(
                 user_message=body.content,
                 document_text=document_text,
                 conversation_history=conversation_history,
+                has_document=document is not None,
             ):
                 full_response += chunk
                 event_data = json.dumps({"type": "content", "content": chunk})

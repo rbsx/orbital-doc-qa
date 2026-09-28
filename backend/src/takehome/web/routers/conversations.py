@@ -48,6 +48,7 @@ class DocumentInfo(BaseModel):
     id: str
     filename: str
     page_count: int
+    has_text: bool
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
@@ -117,6 +118,7 @@ async def get_conversation_endpoint(
             id=doc.id,
             filename=doc.filename,
             page_count=doc.page_count,
+            has_text=doc.extracted_text is not None,
             uploaded_at=doc.uploaded_at,
         )
 
@@ -148,6 +150,7 @@ async def update_conversation_endpoint(
             id=doc.id,
             filename=doc.filename,
             page_count=doc.page_count,
+            has_text=doc.extracted_text is not None,
             uploaded_at=doc.uploaded_at,
         )
 

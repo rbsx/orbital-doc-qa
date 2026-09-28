@@ -28,6 +28,7 @@ class DocumentOut(BaseModel):
     conversation_id: str
     filename: str
     page_count: int
+    has_text: bool
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
@@ -78,6 +79,7 @@ async def upload_document_endpoint(
         conversation_id=document.conversation_id,
         filename=document.filename,
         page_count=document.page_count,
+        has_text=document.extracted_text is not None,
         uploaded_at=document.uploaded_at,
     )
 

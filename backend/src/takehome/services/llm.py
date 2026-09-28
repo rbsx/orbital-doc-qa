@@ -39,6 +39,7 @@ async def chat_with_document(
     user_message: str,
     document_text: str | None,
     conversation_history: list[dict[str, str]],
+    has_document: bool = False,
 ) -> AsyncIterator[str]:
     """Stream a response to the user's message, yielding text chunks.
 
@@ -55,6 +56,15 @@ async def chat_with_document(
             "<document>\n"
             f"{document_text}\n"
             "</document>\n"
+        )
+    elif has_document:
+        # e.g. a scanned PDF with no text layer: the user can see it in the viewer,
+        # so "no document uploaded" would be wrong and confusing.
+        prompt_parts.append(
+            "A document has been uploaded, but no text could be extracted from it "
+            "(it is most likely a scanned image), so you cannot read its contents. "
+            "If the user asks about it, explain this and suggest uploading a PDF "
+            "with selectable text (only PDFs are supported).\n"
         )
     else:
         prompt_parts.append(
