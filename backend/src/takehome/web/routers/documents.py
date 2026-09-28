@@ -19,6 +19,7 @@ from takehome.services.conversation import (
 )
 from takehome.services.document import (
     PasswordProtectedError,
+    delete_document,
     get_document,
     list_documents_for_conversation,
     upload_document,
@@ -112,6 +113,21 @@ async def upload_document_endpoint(
     # The label depends on the documents already in the conversation.
     documents = await list_documents_for_conversation(session, conversation_id)
     return next(d for d in documents_out(documents) if d.id == document.id)
+
+
+@router.delete("/api/documents/{document_id}", status_code=204)
+async def delete_document_endpoint(
+    document_id: str,
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Remove a document from its conversation (e.g. one uploaded by mistake)."""
+    document = await get_document(session, document_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    conversation_id = document.conversation_id
+    await delete_document(session, document)
+    await touch_conversation(session, conversation_id)
+    logger.info("Document removed", conversation_id=conversation_id, document_id=document_id)
 
 
 @router.get("/api/documents/{document_id}/content")

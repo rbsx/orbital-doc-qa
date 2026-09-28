@@ -22,21 +22,27 @@ _CHAR_FOLDS = str.maketrans(
 
 
 def sort_documents(documents: Sequence[Document]) -> list[Document]:
-    """Upload order, which is what labels are based on."""
-    return sorted(documents, key=lambda d: (d.uploaded_at, d.id))
+    """Label order (upload order)."""
+    return sorted(documents, key=lambda d: d.position)
+
+
+def document_label(document: Document) -> str:
+    return f"D{document.position}"
 
 
 def document_labels(documents: Sequence[Document]) -> dict[str, str]:
-    """Map document id to its label: "D1", "D2", … in upload order."""
-    return {doc.id: f"D{i}" for i, doc in enumerate(sort_documents(documents), start=1)}
+    """Map document id to its stable label: "D1", "D2", … (gaps where documents
+    were removed)."""
+    return {doc.id: document_label(doc) for doc in documents}
 
 
 def format_documents(documents: Sequence[Document]) -> str:
     """Render a conversation's documents for a prompt, one labelled block each."""
     blocks: list[str] = []
-    for i, doc in enumerate(sort_documents(documents), start=1):
+    for doc in sort_documents(documents):
         attrs = (
-            f'label="D{i}" filename="{escape(doc.filename, quote=True)}" pages="{doc.page_count}"'
+            f'label="{document_label(doc)}" filename="{escape(doc.filename, quote=True)}" '
+            f'pages="{doc.page_count}"'
         )
         if doc.extracted_text:
             blocks.append(f"<document {attrs}>\n{doc.extracted_text}\n</document>")
