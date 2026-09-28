@@ -6,39 +6,53 @@ export function useMessages(conversationId: string | null) {
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [streaming, setStreaming] = useState(false);
-	const [streamingContent, setStreamingContent] = useState("");
-	const abortRef = useRef<AbortController | null>(null);
+	// In-progress replies keyed by conversation. Switching chats mid-reply lets
+	// the reply finish (and be saved) in the background instead of leaking into
+	// whichever chat is now on screen.
+	const [streams, setStreams] = useState<Record<string, string>>({});
+	const activeIdRef = useRef(conversationId);
+	activeIdRef.current = conversationId;
+	const controllersRef = useRef(new Set<AbortController>());
 
 	const refresh = useCallback(async () => {
 		if (!conversationId) {
 			setMessages([]);
 			return;
 		}
+		const isActive = () => activeIdRef.current === conversationId;
 		try {
 			setLoading(true);
 			setError(null);
 			const data = await api.fetchMessages(conversationId);
-			setMessages(data);
+			if (isActive()) setMessages(data);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to load messages");
+			if (isActive()) {
+				setError(
+					err instanceof Error ? err.message : "Failed to load messages",
+				);
+			}
 		} finally {
-			setLoading(false);
+			if (isActive()) setLoading(false);
 		}
 	}, [conversationId]);
 
 	useEffect(() => {
 		refresh();
-		return () => {
-			if (abortRef.current) {
-				abortRef.current.abort();
-			}
-		};
 	}, [refresh]);
+
+	useEffect(() => {
+		const controllers = controllersRef.current;
+		return () => {
+			for (const controller of controllers) controller.abort();
+		};
+	}, []);
 
 	const send = useCallback(
 		async (content: string) => {
-			if (!conversationId || streaming) return;
+			if (!conversationId || conversationId in streams) return;
+			const isActive = () => activeIdRef.current === conversationId;
+			const setStreamingContent = (text: string) =>
+				setStreams((prev) => ({ ...prev, [conversationId]: text }));
 
 			const userMessage: Message = {
 				id: `temp-${Date.now()}`,
@@ -50,12 +64,18 @@ export function useMessages(conversationId: string | null) {
 			};
 
 			setMessages((prev) => [...prev, userMessage]);
-			setStreaming(true);
 			setStreamingContent("");
 			setError(null);
 
+			const controller = new AbortController();
+			controllersRef.current.add(controller);
+
 			try {
-				const response = await api.sendMessage(conversationId, content);
+				const response = await api.sendMessage(
+					conversationId,
+					content,
+					controller.signal,
+				);
 
 				if (!response.body) {
 					throw new Error("No response body");
@@ -98,7 +118,8 @@ export function useMessages(conversationId: string | null) {
 								setStreamingContent(accumulated);
 							} else if (parsed.type === "message" && parsed.message) {
 								// Final message from server
-								setMessages((prev) => [...prev, parsed.message as Message]);
+								const message = parsed.message;
+								if (isActive()) setMessages((prev) => [...prev, message]);
 								accumulated = "";
 							} else if (parsed.content && !parsed.type) {
 								// Fallback: plain content field
@@ -113,7 +134,7 @@ export function useMessages(conversationId: string | null) {
 
 				// If we accumulated content but never got a final message,
 				// create a synthetic assistant message
-				if (accumulated) {
+				if (accumulated && isActive()) {
 					const assistantMessage: Message = {
 						id: `stream-${Date.now()}`,
 						conversation_id: conversationId,
@@ -127,24 +148,31 @@ export function useMessages(conversationId: string | null) {
 
 				// Refresh to get server-canonical messages
 				const freshMessages = await api.fetchMessages(conversationId);
-				setMessages(freshMessages);
+				if (isActive()) setMessages(freshMessages);
 			} catch (err) {
 				if (err instanceof DOMException && err.name === "AbortError") return;
-				setError(err instanceof Error ? err.message : "Failed to send message");
+				if (isActive()) {
+					setError(
+						err instanceof Error ? err.message : "Failed to send message",
+					);
+				}
 			} finally {
-				setStreaming(false);
-				setStreamingContent("");
+				controllersRef.current.delete(controller);
+				setStreams(({ [conversationId]: _done, ...rest }) => rest);
 			}
 		},
-		[conversationId, streaming],
+		[conversationId, streams],
 	);
+
+	const streamingContent =
+		conversationId !== null ? streams[conversationId] : undefined;
 
 	return {
 		messages,
 		loading,
 		error,
-		streaming,
-		streamingContent,
+		streaming: streamingContent !== undefined,
+		streamingContent: streamingContent ?? "",
 		send,
 		refresh,
 	};
