@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { MessageSquarePlus, Trash2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { relativeTime } from "../lib/utils";
 import type { Conversation } from "../types";
 import { Button } from "./ui/button";
@@ -26,6 +27,12 @@ export function ChatSidebar({
 	onCreate,
 	onDelete,
 }: ChatSidebarProps) {
+	// The draft row is at the top; bring it into view when a new chat starts.
+	const listRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (showDraft) listRef.current?.scrollIntoView({ block: "start" });
+	}, [showDraft]);
+
 	return (
 		<div className="flex h-full w-[250px] flex-shrink-0 flex-col border-r border-neutral-200 bg-white">
 			<div className="flex items-center justify-between border-b border-neutral-100 p-3">
@@ -36,7 +43,7 @@ export function ChatSidebar({
 			</div>
 
 			<ScrollArea className="flex-1">
-				<div className="p-2">
+				<div ref={listRef} className="p-2">
 					{loading && conversations.length === 0 && (
 						<div className="space-y-2 p-2">
 							{[1, 2, 3].map((i) => (
