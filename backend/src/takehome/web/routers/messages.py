@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator
 from datetime import datetime
@@ -136,6 +137,10 @@ async def send_message(
     async def event_stream() -> AsyncIterator[str]:
         """Generate SSE events with the streamed LLM response."""
         full_response = ""
+        # The title only depends on the user's message, so generate it alongside
+        # the answer instead of after it, where it kept the input locked for an
+        # extra model round-trip.
+        title_task = asyncio.create_task(generate_title(body.content)) if is_first_message else None
 
         try:
             async for chunk in chat_with_document(
@@ -177,9 +182,9 @@ async def send_message(
             await save_session.refresh(assistant_message)
 
             # Auto-generate title from first user message
-            if is_first_message:
+            if title_task is not None:
                 try:
-                    title = await generate_title(body.content)
+                    title = await title_task
                     await update_conversation(save_session, conversation_id, title)
                     logger.info(
                         "Auto-generated conversation title",
