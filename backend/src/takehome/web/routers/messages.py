@@ -20,7 +20,7 @@ from takehome.services.conversation import (
     touch_conversation,
     update_conversation,
 )
-from takehome.services.document import get_document_for_conversation
+from takehome.services.document import list_documents_for_conversation
 from takehome.services.llm import chat_with_document, generate_title
 
 logger = structlog.get_logger()
@@ -134,10 +134,8 @@ async def send_message(
 
     logger.info("User message saved", conversation_id=conversation_id, message_id=user_message.id)
 
-    # Load document text for the conversation
-    document = await get_document_for_conversation(session, conversation_id)
-    document_text: str | None = document.extracted_text if document else None
-    documents = list(conversation.documents)
+    # Load every document in the conversation; the model answers across all of them
+    documents = await list_documents_for_conversation(session, conversation_id)
 
     # Load conversation history (exclude the message we just saved, it will be the user_message param)
     stmt = (
@@ -168,9 +166,8 @@ async def send_message(
         try:
             async for chunk in chat_with_document(
                 user_message=body.content,
-                document_text=document_text,
+                documents=documents,
                 conversation_history=conversation_history,
-                has_document=document is not None,
             ):
                 full_response += chunk
                 event_data = json.dumps({"type": "content", "content": chunk})
