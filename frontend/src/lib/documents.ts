@@ -8,6 +8,7 @@ const MAX_SHORT_NAME = 24;
 export function shortDocumentName(filename: string): string {
 	const words = filename
 		.replace(/\.pdf$/i, "")
+		.replace(/^\d{1,3}[\s_.-]+/, "") // ordering prefixes like "01-", not years
 		.replace(/[-_.]+/g, " ")
 		.trim()
 		.split(/\s+/);

@@ -1,8 +1,10 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useConflicts } from "../hooks/use-conflicts";
 import type { PendingUpload } from "../hooks/use-documents";
 import type { Document, Message, ViewerTarget } from "../types";
 import { ChatInput } from "./ChatInput";
+import { ConflictBanner } from "./ConflictBanner";
 import { EmptyState } from "./EmptyState";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
 import { UploadProgress } from "./UploadProgress";
@@ -17,6 +19,7 @@ interface ChatWindowProps {
 	uploads: PendingUpload[];
 	uploading: boolean;
 	conversationId: string | null;
+	// Changes whenever the conversation's set of documents does; drives the conflict check.
 	onSend: (content: string) => void;
 	onUpload: (files: File[]) => void;
 	onDismissUpload: (key: string) => void;
@@ -46,6 +49,21 @@ export function ChatWindow({
 		>
 			{error}
 		</div>
+	);
+	// Re-checked for conflicts whenever the set of documents changes.
+	const documentsKey = documents.map((d) => d.id).join(",");
+	const conflicts = useConflicts(conversationId, documentsKey);
+	const conflictBanner = (
+		<ConflictBanner
+			report={conflicts.report}
+			loading={conflicts.loading}
+			error={conflicts.error}
+			onRetry={conflicts.retry}
+			onAsk={onSend}
+			askDisabled={streaming}
+			onOpenSource={onOpenSource}
+			documents={documents}
+		/>
 	);
 	// Upload errors are shown per file, next to the input they came from.
 	const chatInput = (
@@ -97,6 +115,7 @@ export function ChatWindow({
 		return (
 			<div className="flex flex-1 flex-col bg-white">
 				{bannerElement}
+				{conflictBanner}
 				<div className="flex flex-1 items-center justify-center">
 					{documentCount > 0 ? (
 						<div className="text-center">
@@ -119,6 +138,7 @@ export function ChatWindow({
 	return (
 		<div className="flex flex-1 flex-col bg-white">
 			{bannerElement}
+			{conflictBanner}
 
 			<div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
 				<div className="mx-auto max-w-2xl space-y-1">
