@@ -5,6 +5,10 @@ WORKDIR /app
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+# pyright (run by `just check`) downloads a Node build that needs libatomic
+RUN apt-get update && apt-get install -y --no-install-recommends libatomic1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Python needs to find the takehome package inside backend/src
 ENV PYTHONPATH=/app/backend/src:$PYTHONPATH
 

@@ -98,7 +98,7 @@ async def upload_document_endpoint(
             status_code=400, detail={"code": "password_protected", "message": str(e)}
         ) from e
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     await touch_conversation(session, conversation_id)
     await title_from_first_document(session, conversation_id, document.filename)

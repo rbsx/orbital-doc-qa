@@ -4,7 +4,8 @@ from collections.abc import AsyncIterator, Sequence
 
 from pydantic_ai import Agent
 
-from takehome.config import settings  # noqa: F401 — triggers ANTHROPIC_API_KEY export
+# Imported for its side effect: exports ANTHROPIC_API_KEY for pydantic-ai.
+import takehome.config  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from takehome.db.models import Document
 from takehome.services.document_context import format_documents
 
