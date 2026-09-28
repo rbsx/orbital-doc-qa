@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight, X } from "lucide-react";
 import { useId, useState } from "react";
 import type { Document } from "../types";
 
@@ -6,6 +6,7 @@ interface DealDocumentsProps {
 	documents: Document[];
 	activeId: string | null;
 	onOpen: (documentId: string) => void;
+	onRemove: (documentId: string) => void;
 }
 
 // The conversation's documents, above the PDF. Collapsible and capped in
@@ -14,6 +15,7 @@ export function DealDocuments({
 	documents,
 	activeId,
 	onOpen,
+	onRemove,
 }: DealDocumentsProps) {
 	const [expanded, setExpanded] = useState(true);
 	const listId = useId();
@@ -46,12 +48,12 @@ export function DealDocuments({
 					{documents.map((doc) => {
 						const active = doc.id === activeId;
 						return (
-							<li key={doc.id}>
+							<li key={doc.id} className="group relative">
 								<button
 									type="button"
 									aria-current={active ? "true" : undefined}
 									title={doc.filename}
-									className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 ${
+									className={`flex w-full items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 ${
 										active
 											? "bg-white shadow-sm ring-1 ring-neutral-200"
 											: "hover:bg-neutral-100"
@@ -88,6 +90,16 @@ export function DealDocuments({
 									<span className="flex-shrink-0 tabular-nums text-neutral-400">
 										{doc.page_count} {doc.page_count === 1 ? "page" : "pages"}
 									</span>
+								</button>
+								{/* A sibling of the row button, shown on hover or keyboard focus. */}
+								<button
+									type="button"
+									aria-label={`Remove ${doc.filename} from this conversation`}
+									title="Remove from conversation"
+									className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-neutral-400 opacity-0 transition-opacity hover:bg-neutral-200 hover:text-red-500 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 group-hover:opacity-100"
+									onClick={() => onRemove(doc.id)}
+								>
+									<X className="h-3.5 w-3.5" />
 								</button>
 							</li>
 						);

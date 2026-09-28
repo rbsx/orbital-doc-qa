@@ -59,6 +59,11 @@ export async function createConversation(): Promise<Conversation> {
 	return handleResponse<Conversation>(res);
 }
 
+export async function deleteDocument(id: string): Promise<void> {
+	const res = await fetch(`${BASE}/documents/${id}`, { method: "DELETE" });
+	if (!res.ok) throw await responseError(res);
+}
+
 export async function deleteConversation(id: string): Promise<void> {
 	const res = await fetch(`${BASE}/conversations/${id}`, {
 		method: "DELETE",

@@ -32,6 +32,7 @@ interface DocumentViewerProps {
 	quote?: string;
 	onPageChange: (page: number) => void;
 	onOpen: (target: ViewerTarget) => void;
+	onRemove: (documentId: string) => void;
 }
 
 export function DocumentViewer({
@@ -41,6 +42,7 @@ export function DocumentViewer({
 	quote,
 	onPageChange,
 	onOpen,
+	onRemove,
 }: DocumentViewerProps) {
 	const [numPages, setNumPages] = useState<number>(0);
 	const [pdfLoading, setPdfLoading] = useState(true);
@@ -148,6 +150,7 @@ export function DocumentViewer({
 				documents={documents}
 				activeId={document.id}
 				onOpen={(documentId) => onOpen({ documentId, page: 1 })}
+				onRemove={onRemove}
 			/>
 
 			{/* Header */}
