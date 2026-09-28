@@ -4,7 +4,7 @@ import { ChatWindow } from "./components/ChatWindow";
 import { DocumentViewer } from "./components/DocumentViewer";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { useConversations } from "./hooks/use-conversations";
-import { useDocument } from "./hooks/use-document";
+import { useDocuments } from "./hooks/use-documents";
 import { useMessages } from "./hooks/use-messages";
 
 export default function App() {
@@ -28,12 +28,12 @@ export default function App() {
 	} = useMessages(selectedId);
 
 	const {
-		document,
+		documents,
+		uploads,
 		uploading,
-		error: uploadError,
 		upload,
-		refresh: refreshDocument,
-	} = useDocument(selectedId);
+		dismiss: dismissUpload,
+	} = useDocuments(selectedId);
 
 	const handleSend = useCallback(
 		async (content: string) => {
@@ -44,14 +44,12 @@ export default function App() {
 	);
 
 	const handleUpload = useCallback(
-		async (file: File) => {
-			const doc = await upload(file);
-			if (doc) {
-				refreshDocument();
-				refreshConversations();
-			}
+		async (files: File[]) => {
+			await upload(files);
+			// Picks up the new document counts and the conversation's new position.
+			refreshConversations();
 		},
-		[upload, refreshDocument, refreshConversations],
+		[upload, refreshConversations],
 	);
 
 	const handleCreate = useCallback(async () => {
@@ -76,15 +74,16 @@ export default function App() {
 					error={messagesError}
 					streaming={streaming}
 					streamingContent={streamingContent}
-					hasDocument={!!document}
+					documentCount={documents.length}
+					uploads={uploads}
 					uploading={uploading}
-					uploadError={uploadError}
 					conversationId={selectedId}
 					onSend={handleSend}
 					onUpload={handleUpload}
+					onDismissUpload={dismissUpload}
 				/>
 
-				<DocumentViewer document={document} />
+				<DocumentViewer document={documents[0] ?? null} />
 			</div>
 		</TooltipProvider>
 	);
