@@ -1,6 +1,14 @@
 import { AlertTriangle, ChevronRight, X } from "lucide-react";
-import { useId } from "react";
+import { useId, useState } from "react";
 import type { Document } from "../types";
+import { Button } from "./ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "./ui/dialog";
 
 interface DealDocumentsProps {
 	documents: Document[];
@@ -22,6 +30,9 @@ export function DealDocuments({
 	onToggle,
 }: DealDocumentsProps) {
 	const listId = useId();
+	// Removing deletes the file and changes what earlier answers can point to,
+	// so it's confirmed first.
+	const [pendingRemoval, setPendingRemoval] = useState<Document | null>(null);
 
 	return (
 		<div className="border-b border-neutral-200 bg-neutral-50">
@@ -100,7 +111,7 @@ export function DealDocuments({
 									aria-label={`Remove ${doc.filename} from this conversation`}
 									title="Remove from conversation"
 									className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-neutral-400 opacity-0 transition-opacity hover:bg-neutral-200 hover:text-red-500 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 group-hover:opacity-100"
-									onClick={() => onRemove(doc.id)}
+									onClick={() => setPendingRemoval(doc)}
 								>
 									<X className="h-3.5 w-3.5" />
 								</button>
@@ -109,6 +120,44 @@ export function DealDocuments({
 					})}
 				</ul>
 			)}
+			<Dialog
+				open={pendingRemoval !== null}
+				onOpenChange={(open) => {
+					if (!open) setPendingRemoval(null);
+				}}
+			>
+				<DialogContent className="max-w-md">
+					<DialogHeader>
+						<DialogTitle>Remove this document?</DialogTitle>
+						<DialogDescription>
+							<span className="font-medium text-neutral-700">
+								{pendingRemoval?.filename}
+							</span>{" "}
+							will be removed from this conversation and deleted. The assistant
+							won't use it any more, and earlier answers that cite it will show
+							the source as removed.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="mt-2 flex justify-end gap-2">
+						<Button
+							variant="secondary"
+							autoFocus
+							onClick={() => setPendingRemoval(null)}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={() => {
+								if (pendingRemoval) onRemove(pendingRemoval.id);
+								setPendingRemoval(null);
+							}}
+						>
+							Remove
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
