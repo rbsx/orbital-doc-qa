@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { PendingUpload } from "../hooks/use-documents";
-import type { Message, ViewerTarget } from "../types";
+import type { Document, Message, ViewerTarget } from "../types";
 import { ChatInput } from "./ChatInput";
 import { EmptyState } from "./EmptyState";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
@@ -13,7 +13,7 @@ interface ChatWindowProps {
 	error: string | null;
 	streaming: boolean;
 	streamingContent: string;
-	documentCount: number;
+	documents: Document[];
 	uploads: PendingUpload[];
 	uploading: boolean;
 	conversationId: string | null;
@@ -29,7 +29,7 @@ export function ChatWindow({
 	error,
 	streaming,
 	streamingContent,
-	documentCount,
+	documents,
 	uploads,
 	uploading,
 	conversationId,
@@ -38,6 +38,7 @@ export function ChatWindow({
 	onDismissUpload,
 	onOpenSource,
 }: ChatWindowProps) {
+	const documentCount = documents.length;
 	const bannerElement = error && (
 		<div
 			role="alert"
@@ -125,10 +126,13 @@ export function ChatWindow({
 						<MessageBubble
 							key={message.id}
 							message={message}
+							documents={documents}
 							onOpenSource={onOpenSource}
 						/>
 					))}
-					{streaming && <StreamingBubble content={streamingContent} />}
+					{streaming && (
+						<StreamingBubble content={streamingContent} documents={documents} />
+					)}
 				</div>
 			</div>
 

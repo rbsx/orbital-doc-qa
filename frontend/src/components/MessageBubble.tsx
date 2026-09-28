@@ -4,20 +4,31 @@ import { type ComponentProps, useMemo } from "react";
 import { Streamdown } from "streamdown";
 import "streamdown/styles.css";
 import { CITATION_HREF_PREFIX, prepareCitations } from "../lib/citations";
-import type { Citation, Message, ViewerTarget } from "../types";
+import type { Citation, Document, Message, ViewerTarget } from "../types";
 import { CitationChip } from "./CitationChip";
 
 interface AnswerProps {
 	content: string;
 	// Checked citations from the server; absent while the answer is streaming.
 	citations?: Citation[];
+	documents: Document[];
 	streaming?: boolean;
 	onOpenSource?: (target: ViewerTarget) => void;
 }
 
 /** Markdown answer with its [[D1 p4: "…"]] markers rendered as citation chips. */
-function Answer({ content, citations, streaming, onOpenSource }: AnswerProps) {
+function Answer({
+	content,
+	citations,
+	documents,
+	streaming,
+	onOpenSource,
+}: AnswerProps) {
 	const { markdown, markers } = prepareCitations(content);
+	const filenames = useMemo(
+		() => new Map(documents.map((d) => [d.label, d.filename])),
+		[documents],
+	);
 
 	const components = useMemo(
 		() => ({
@@ -42,6 +53,7 @@ function Answer({ content, citations, streaming, onOpenSource }: AnswerProps) {
 				return (
 					<CitationChip
 						label={marker.label}
+						filename={filenames.get(marker.label)}
 						page={marker.page}
 						quote={marker.quote}
 						citation={citation}
@@ -59,7 +71,7 @@ function Answer({ content, citations, streaming, onOpenSource }: AnswerProps) {
 				);
 			},
 		}),
-		[markers, citations, onOpenSource],
+		[markers, citations, filenames, onOpenSource],
 	);
 
 	return (
@@ -95,10 +107,15 @@ function CitationSummary({ citations }: { citations: Citation[] }) {
 
 interface MessageBubbleProps {
 	message: Message;
+	documents: Document[];
 	onOpenSource?: (target: ViewerTarget) => void;
 }
 
-export function MessageBubble({ message, onOpenSource }: MessageBubbleProps) {
+export function MessageBubble({
+	message,
+	documents,
+	onOpenSource,
+}: MessageBubbleProps) {
 	if (message.role === "system") {
 		return (
 			<motion.div
@@ -143,6 +160,7 @@ export function MessageBubble({ message, onOpenSource }: MessageBubbleProps) {
 			<div className="min-w-0 max-w-[80%]">
 				<Answer
 					content={message.content}
+					documents={documents}
 					citations={message.citations}
 					onOpenSource={onOpenSource}
 				/>
@@ -154,9 +172,10 @@ export function MessageBubble({ message, onOpenSource }: MessageBubbleProps) {
 
 interface StreamingBubbleProps {
 	content: string;
+	documents: Document[];
 }
 
-export function StreamingBubble({ content }: StreamingBubbleProps) {
+export function StreamingBubble({ content, documents }: StreamingBubbleProps) {
 	return (
 		<div className="flex gap-3 py-1.5">
 			<div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-neutral-900">
@@ -164,7 +183,7 @@ export function StreamingBubble({ content }: StreamingBubbleProps) {
 			</div>
 			<div className="min-w-0 max-w-[80%]">
 				{content ? (
-					<Answer content={content} streaming />
+					<Answer content={content} documents={documents} streaming />
 				) : (
 					<div className="flex items-center gap-1 py-2">
 						<span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neutral-400" />

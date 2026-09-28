@@ -109,7 +109,7 @@ export default function App() {
 					error={messagesError}
 					streaming={streaming}
 					streamingContent={streamingContent}
-					documentCount={documents.length}
+					documents={documents}
 					uploads={uploads}
 					uploading={uploading}
 					conversationId={selectedId}
