@@ -73,6 +73,8 @@ The full diff against the starting code: [`851ccdd...main`](https://github.com/r
 8. [#8](https://github.com/rbsx/orbital-doc-qa/pull/8) Confirmation before removing a document
 9. [#9](https://github.com/rbsx/orbital-doc-qa/pull/9) README and this document
 10. [#10](https://github.com/rbsx/orbital-doc-qa/pull/10) Two citation-matching gaps found by running the README demo on a fresh clone
+11. [#11](https://github.com/rbsx/orbital-doc-qa/pull/11) PR list update
+12. [#12](https://github.com/rbsx/orbital-doc-qa/pull/12) `just check` passes: it failed in the starting code (3 lint errors, 5 type errors, and pyright unable to run in the image)
 
 ## Known limitations
 
