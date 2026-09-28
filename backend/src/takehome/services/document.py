@@ -16,6 +16,18 @@ from takehome.services.document_context import sort_documents
 logger = structlog.get_logger()
 
 
+class PasswordProtectedError(ValueError):
+    """The PDF needs a password to open, so its text can't be read."""
+
+
+def _needs_password(content: bytes) -> bool:
+    try:
+        with fitz.open(stream=content, filetype="pdf") as doc:
+            return bool(doc.needs_pass)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+    except Exception:
+        return False  # not a readable PDF at all; extraction below handles that
+
+
 async def upload_document(
     session: AsyncSession, conversation_id: str, file: UploadFile
 ) -> Document:
@@ -25,7 +37,8 @@ async def upload_document(
     and stores metadata in the database.
 
     Raises ValueError if the file is not a PDF, or if it would take the conversation
-    past its document or text limits (every document is sent with every question).
+    past its document or text limits (every document is sent with every question),
+    and PasswordProtectedError if it needs a password to open.
     """
     existing_count, existing_chars = await _conversation_text_usage(session, conversation_id)
     if existing_count >= settings.max_documents_per_conversation:
@@ -49,8 +62,18 @@ async def upload_document(
             f"File too large. Maximum size is {settings.max_upload_size // (1024 * 1024)}MB."
         )
 
-    # Generate a unique filename to avoid collisions
     original_filename = file.filename or "document.pdf"
+
+    # An open password locks the text as well as the view, so the assistant could
+    # never read it. Say so, rather than store it looking like a scan. (A PDF that
+    # only restricts copying or printing opens freely and is handled as normal.)
+    if _needs_password(content):
+        raise PasswordProtectedError(
+            "This PDF needs a password to open, so it can't be read. Remove the password "
+            "(e.g. re-save or print it to PDF) and upload it again."
+        )
+
+    # Generate a unique filename to avoid collisions
     unique_name = f"{uuid.uuid4().hex}_{original_filename}"
     file_path = os.path.join(settings.upload_dir, unique_name)
 

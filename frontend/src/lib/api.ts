@@ -8,12 +8,32 @@ import type {
 
 const BASE = "/api";
 
-// FastAPI puts user-facing messages in `detail`; show that rather than raw JSON.
+/** An API failure, with the server's machine-readable code when it sends one. */
+export class ApiError extends Error {
+	constructor(
+		message: string,
+		readonly code?: string,
+	) {
+		super(message);
+	}
+}
+
+// FastAPI puts user-facing messages in `detail`, either as a string or as
+// { code, message }; show that rather than raw JSON.
 async function responseError(response: Response): Promise<Error> {
 	const text = await response.text().catch(() => "");
 	try {
 		const { detail } = JSON.parse(text) as { detail?: unknown };
-		if (typeof detail === "string") return new Error(detail);
+		if (typeof detail === "string") return new ApiError(detail);
+		if (detail && typeof detail === "object" && "message" in detail) {
+			const { message, code } = detail as { message: unknown; code?: unknown };
+			if (typeof message === "string") {
+				return new ApiError(
+					message,
+					typeof code === "string" ? code : undefined,
+				);
+			}
+		}
 	} catch {
 		// Not JSON: fall back to the raw body
 	}
