@@ -13,7 +13,11 @@ from starlette.responses import StreamingResponse
 
 from takehome.db.models import Message
 from takehome.db.session import get_session
-from takehome.services.conversation import get_conversation, update_conversation
+from takehome.services.conversation import (
+    get_conversation,
+    touch_conversation,
+    update_conversation,
+)
 from takehome.services.document import get_document_for_conversation
 from takehome.services.llm import chat_with_document, count_sources_cited, generate_title
 
@@ -103,6 +107,7 @@ async def send_message(
     session.add(user_message)
     await session.commit()
     await session.refresh(user_message)
+    await touch_conversation(session, conversation_id)
 
     logger.info("User message saved", conversation_id=conversation_id, message_id=user_message.id)
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -49,6 +49,20 @@ async def update_conversation(
     await session.commit()
     await session.refresh(conversation)
     return conversation
+
+
+async def touch_conversation(session: AsyncSession, conversation_id: str) -> None:
+    """Mark a conversation as active now so the sidebar lists it first.
+
+    `onupdate` only fires when the conversation row itself changes, not when
+    messages or documents are added to it.
+    """
+    await session.execute(
+        update(Conversation)
+        .where(Conversation.id == conversation_id)
+        .values(updated_at=func.now())
+    )
+    await session.commit()
 
 
 async def delete_conversation(session: AsyncSession, conversation_id: str) -> bool:

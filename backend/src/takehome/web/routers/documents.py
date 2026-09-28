@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 
 from takehome.db.session import get_session
-from takehome.services.conversation import get_conversation
+from takehome.services.conversation import get_conversation, touch_conversation
 from takehome.services.document import get_document, upload_document
 
 logger = structlog.get_logger()
@@ -66,6 +66,8 @@ async def upload_document_endpoint(
         if "already has a document" in error_message:
             raise HTTPException(status_code=409, detail=error_message)
         raise HTTPException(status_code=400, detail=error_message)
+
+    await touch_conversation(session, conversation_id)
 
     logger.info(
         "Document uploaded",
