@@ -29,6 +29,17 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 	const [dragging, setDragging] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
 
+	// Start each document fresh: otherwise switching from page 7 of one
+	// document to a 3-page one requests a page that doesn't exist.
+	const [shownDocumentId, setShownDocumentId] = useState(document?.id);
+	if (document?.id !== shownDocumentId) {
+		setShownDocumentId(document?.id);
+		setCurrentPage(1);
+		setNumPages(0);
+		setPdfLoading(true);
+		setPdfError(null);
+	}
+
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
 			e.preventDefault();
