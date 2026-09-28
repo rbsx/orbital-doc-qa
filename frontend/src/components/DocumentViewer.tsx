@@ -10,7 +10,8 @@ import { Document as PDFDocument, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { getDocumentUrl } from "../lib/api";
-import type { Document } from "../types";
+import type { Document, ViewerTarget } from "../types";
+import { DealDocuments } from "./DealDocuments";
 import { Button } from "./ui/button";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -23,28 +24,43 @@ const MAX_WIDTH = 700;
 const DEFAULT_WIDTH = 400;
 
 interface DocumentViewerProps {
+	documents: Document[];
+	// The document on screen and where in it: owned by App (CONTRACT §4).
 	document: Document | null;
+	page: number;
+	quote?: string;
+	onPageChange: (page: number) => void;
+	onOpen: (target: ViewerTarget) => void;
 }
 
-export function DocumentViewer({ document }: DocumentViewerProps) {
+export function DocumentViewer({
+	documents,
+	document,
+	page,
+	onPageChange,
+	onOpen,
+}: DocumentViewerProps) {
 	const [numPages, setNumPages] = useState<number>(0);
-	const [currentPage, setCurrentPage] = useState(1);
 	const [pdfLoading, setPdfLoading] = useState(true);
 	const [pdfError, setPdfError] = useState<string | null>(null);
 	const [width, setWidth] = useState(DEFAULT_WIDTH);
 	const [dragging, setDragging] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
 
-	// Start each document fresh: otherwise switching from page 7 of one
-	// document to a 3-page one requests a page that doesn't exist.
+	// Start each document's loading state fresh. The width deliberately
+	// carries over, so a resized panel stays that size across documents.
 	const [shownDocumentId, setShownDocumentId] = useState(document?.id);
 	if (document?.id !== shownDocumentId) {
 		setShownDocumentId(document?.id);
-		setCurrentPage(1);
 		setNumPages(0);
 		setPdfLoading(true);
 		setPdfError(null);
 	}
+
+	// A target can name a page the PDF doesn't have (e.g. a model citing
+	// page 12 of a 9-page lease); show the nearest real page instead.
+	const currentPage =
+		numPages > 0 ? Math.min(Math.max(1, page), numPages) : Math.max(1, page);
 
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
@@ -84,7 +100,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 				className="flex h-full flex-shrink-0 flex-col items-center justify-center border-l border-neutral-200 bg-neutral-50"
 			>
 				<FileText className="mb-3 h-10 w-10 text-neutral-300" />
-				<p className="text-sm text-neutral-400">No document uploaded</p>
+				<p className="text-sm text-neutral-400">No documents uploaded</p>
 			</div>
 		);
 	}
@@ -105,15 +121,29 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 				onMouseDown={handleMouseDown}
 			/>
 
+			<DealDocuments
+				documents={documents}
+				activeId={document.id}
+				onOpen={(documentId) => onOpen({ documentId, page: 1 })}
+			/>
+
 			{/* Header */}
 			<div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
-				<div className="min-w-0">
-					<p className="truncate text-sm font-medium text-neutral-800">
-						{document.filename}
-					</p>
-					<p className="text-xs text-neutral-400">
-						{document.page_count} page{document.page_count !== 1 ? "s" : ""}
-					</p>
+				<div className="flex min-w-0 items-start gap-2">
+					<span className="mt-0.5 flex-shrink-0 rounded bg-neutral-100 px-1.5 py-px font-mono text-[10px] font-medium text-neutral-600">
+						{document.label}
+					</span>
+					<div className="min-w-0">
+						<p
+							className="truncate text-sm font-medium text-neutral-800"
+							title={document.filename}
+						>
+							{document.filename}
+						</p>
+						<p className="text-xs text-neutral-400">
+							{document.page_count} page{document.page_count !== 1 ? "s" : ""}
+						</p>
+					</div>
 				</div>
 			</div>
 
@@ -175,7 +205,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 						className="h-7 w-7"
 						disabled={currentPage <= 1}
 						aria-label="Previous page"
-						onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+						onClick={() => onPageChange(currentPage - 1)}
 					>
 						<ChevronLeft className="h-4 w-4" />
 					</Button>
@@ -188,7 +218,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 						className="h-7 w-7"
 						disabled={currentPage >= numPages}
 						aria-label="Next page"
-						onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
+						onClick={() => onPageChange(currentPage + 1)}
 					>
 						<ChevronRight className="h-4 w-4" />
 					</Button>

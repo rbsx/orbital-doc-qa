@@ -1,9 +1,11 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
+import type { PendingUpload } from "../hooks/use-documents";
 import type { Message } from "../types";
 import { ChatInput } from "./ChatInput";
 import { EmptyState } from "./EmptyState";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
+import { UploadProgress } from "./UploadProgress";
 
 interface ChatWindowProps {
 	messages: Message[];
@@ -11,12 +13,13 @@ interface ChatWindowProps {
 	error: string | null;
 	streaming: boolean;
 	streamingContent: string;
-	hasDocument: boolean;
+	documentCount: number;
+	uploads: PendingUpload[];
 	uploading: boolean;
-	uploadError: string | null;
 	conversationId: string | null;
 	onSend: (content: string) => void;
-	onUpload: (file: File) => void;
+	onUpload: (files: File[]) => void;
+	onDismissUpload: (key: string) => void;
 }
 
 export function ChatWindow({
@@ -25,21 +28,33 @@ export function ChatWindow({
 	error,
 	streaming,
 	streamingContent,
-	hasDocument,
+	documentCount,
+	uploads,
 	uploading,
-	uploadError,
 	conversationId,
 	onSend,
 	onUpload,
+	onDismissUpload,
 }: ChatWindowProps) {
-	const banner = uploadError ?? error;
-	const bannerElement = banner && (
+	const bannerElement = error && (
 		<div
 			role="alert"
 			className="mx-4 mt-2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600"
 		>
-			{banner}
+			{error}
 		</div>
+	);
+	// Upload errors are shown per file, next to the input they came from.
+	const chatInput = (
+		<ChatInput
+			onSend={onSend}
+			onUpload={onUpload}
+			disabled={streaming}
+			uploading={uploading}
+			attachments={
+				<UploadProgress uploads={uploads} onDismiss={onDismissUpload} />
+			}
+		/>
 	);
 	const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -80,23 +95,20 @@ export function ChatWindow({
 			<div className="flex flex-1 flex-col bg-white">
 				{bannerElement}
 				<div className="flex flex-1 items-center justify-center">
-					{hasDocument ? (
+					{documentCount > 0 ? (
 						<div className="text-center">
 							<p className="text-sm text-neutral-500">
-								Document uploaded. Ask a question to get started.
+								{documentCount === 1
+									? "1 document uploaded."
+									: `${documentCount} documents uploaded.`}{" "}
+								Ask a question to get started.
 							</p>
 						</div>
 					) : (
 						<EmptyState onUpload={onUpload} uploading={uploading} />
 					)}
 				</div>
-				<ChatInput
-					onSend={onSend}
-					onUpload={onUpload}
-					disabled={streaming}
-					hasDocument={hasDocument}
-					uploading={uploading}
-				/>
+				{chatInput}
 			</div>
 		);
 	}
@@ -114,13 +126,7 @@ export function ChatWindow({
 				</div>
 			</div>
 
-			<ChatInput
-				onSend={onSend}
-				onUpload={onUpload}
-				disabled={streaming}
-				hasDocument={hasDocument}
-				uploading={uploading}
-			/>
+			{chatInput}
 		</div>
 	);
 }
