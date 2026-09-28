@@ -13,9 +13,11 @@ from takehome.db.models import Document
 
 _PAGE_MARKER = re.compile(r"^--- Page (\d+) ---$", re.MULTILINE)
 
-# Typographic variants the model tends to normalise when quoting.
+# Variants the model changes when quoting: curly vs straight punctuation, and double
+# quotes inside a quote, which it swaps for single ones because the citation marker
+# itself is wrapped in double quotes.
 _CHAR_FOLDS = str.maketrans(
-    {"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-", "—": "-"}
+    {"‘": "'", "’": "'", "“": "'", "”": "'", '"': "'", "–": "-", "—": "-"}
 )
 
 

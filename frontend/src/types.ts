@@ -13,7 +13,17 @@ export interface Message {
 	role: "user" | "assistant" | "system";
 	content: string;
 	sources_cited: number;
+	citations: Citation[];
 	created_at: string;
+}
+
+// docs/CONTRACT.md §3: a citation from an answer, checked against its source page.
+export interface Citation {
+	document_id: string | null; // null when the label matches no document
+	label: string;
+	page: number;
+	quote: string;
+	verified: boolean;
 }
 
 export interface Document {

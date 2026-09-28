@@ -1,7 +1,7 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { PendingUpload } from "../hooks/use-documents";
-import type { Message } from "../types";
+import type { Document, Message, ViewerTarget } from "../types";
 import { ChatInput } from "./ChatInput";
 import { EmptyState } from "./EmptyState";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
@@ -13,13 +13,14 @@ interface ChatWindowProps {
 	error: string | null;
 	streaming: boolean;
 	streamingContent: string;
-	documentCount: number;
+	documents: Document[];
 	uploads: PendingUpload[];
 	uploading: boolean;
 	conversationId: string | null;
 	onSend: (content: string) => void;
 	onUpload: (files: File[]) => void;
 	onDismissUpload: (key: string) => void;
+	onOpenSource: (target: ViewerTarget) => void;
 }
 
 export function ChatWindow({
@@ -28,14 +29,16 @@ export function ChatWindow({
 	error,
 	streaming,
 	streamingContent,
-	documentCount,
+	documents,
 	uploads,
 	uploading,
 	conversationId,
 	onSend,
 	onUpload,
 	onDismissUpload,
+	onOpenSource,
 }: ChatWindowProps) {
+	const documentCount = documents.length;
 	const bannerElement = error && (
 		<div
 			role="alert"
@@ -120,9 +123,16 @@ export function ChatWindow({
 			<div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
 				<div className="mx-auto max-w-2xl space-y-1">
 					{messages.map((message) => (
-						<MessageBubble key={message.id} message={message} />
+						<MessageBubble
+							key={message.id}
+							message={message}
+							documents={documents}
+							onOpenSource={onOpenSource}
+						/>
 					))}
-					{streaming && <StreamingBubble content={streamingContent} />}
+					{streaming && (
+						<StreamingBubble content={streamingContent} documents={documents} />
+					)}
 				</div>
 			</div>
 

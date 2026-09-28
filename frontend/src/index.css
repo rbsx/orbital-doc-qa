@@ -132,3 +132,24 @@ body {
 	background-color: #f5f5f5;
 	font-weight: 600;
 }
+
+/* A cited quote highlighted in the PDF text layer. The text layer's glyphs are
+   transparent over the rendered page, so only the background shows. pdf.js
+   places text boxes by fallback-font metrics, which sits them slightly above the
+   printed glyphs at small scales, so the band extends down to cover the line,
+   and multiply keeps the print legible like a highlighter pen. */
+.textLayer mark.citation-highlight {
+	color: transparent;
+	padding: 0.15em 0 0.55em;
+	background-color: rgb(250 204 21 / 0.5);
+	mix-blend-mode: multiply;
+	border-radius: 2px;
+	animation: citation-flash 1.2s ease-out;
+}
+
+@keyframes citation-flash {
+	0%,
+	30% {
+		background-color: rgb(250 204 21 / 0.9);
+	}
+}

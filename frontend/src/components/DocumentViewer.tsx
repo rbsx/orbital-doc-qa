@@ -5,11 +5,12 @@ import {
 	FileText,
 	Loader2,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Document as PDFDocument, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { getDocumentUrl } from "../lib/api";
+import { findQuoteInItems, renderHighlightedItem } from "../lib/highlight";
 import type { Document, ViewerTarget } from "../types";
 import { DealDocuments } from "./DealDocuments";
 import { Button } from "./ui/button";
@@ -37,6 +38,7 @@ export function DocumentViewer({
 	documents,
 	document,
 	page,
+	quote,
 	onPageChange,
 	onOpen,
 }: DocumentViewerProps) {
@@ -61,6 +63,27 @@ export function DocumentViewer({
 	// page 12 of a 9-page lease); show the nearest real page instead.
 	const currentPage =
 		numPages > 0 ? Math.min(Math.max(1, page), numPages) : Math.max(1, page);
+
+	// Text items of the page on screen, used to find the quote in the text layer.
+	// Dropped whenever the page changes so a quote is never looked up in the
+	// previous page's text; an unchanged page keeps its (already loaded) text.
+	const [pageItems, setPageItems] = useState<string[]>([]);
+	const pageKey = `${document?.id}:${currentPage}`;
+	const [itemsPageKey, setItemsPageKey] = useState(pageKey);
+	if (pageKey !== itemsPageKey) {
+		setItemsPageKey(pageKey);
+		setPageItems([]);
+	}
+
+	const highlightRanges = useMemo(
+		() => (quote ? findQuoteInItems(pageItems, quote) : null),
+		[pageItems, quote],
+	);
+	const customTextRenderer = useCallback(
+		({ str, itemIndex }: { str: string; itemIndex: number }) =>
+			renderHighlightedItem(str, highlightRanges?.get(itemIndex)),
+		[highlightRanges],
+	);
 
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
@@ -185,6 +208,19 @@ export function DocumentViewer({
 					{!pdfLoading && !pdfError && (
 						<Page
 							pageNumber={currentPage}
+							onGetTextSuccess={({ items }) =>
+								setPageItems(
+									items.map((item) => ("str" in item ? item.str : "")),
+								)
+							}
+							customTextRenderer={
+								highlightRanges?.size ? customTextRenderer : undefined
+							}
+							onRenderTextLayerSuccess={() =>
+								containerRef.current
+									?.querySelector(".citation-highlight")
+									?.scrollIntoView({ block: "center", behavior: "smooth" })
+							}
 							width={pdfPageWidth}
 							loading={
 								<div className="flex items-center justify-center py-12">
