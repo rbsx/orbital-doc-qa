@@ -12,6 +12,8 @@ interface ChatWindowProps {
 	streaming: boolean;
 	streamingContent: string;
 	hasDocument: boolean;
+	uploading: boolean;
+	uploadError: string | null;
 	conversationId: string | null;
 	onSend: (content: string) => void;
 	onUpload: (file: File) => void;
@@ -24,10 +26,21 @@ export function ChatWindow({
 	streaming,
 	streamingContent,
 	hasDocument,
+	uploading,
+	uploadError,
 	conversationId,
 	onSend,
 	onUpload,
 }: ChatWindowProps) {
+	const banner = uploadError ?? error;
+	const bannerElement = banner && (
+		<div
+			role="alert"
+			className="mx-4 mt-2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600"
+		>
+			{banner}
+		</div>
+	);
 	const scrollRef = useRef<HTMLDivElement>(null);
 
 	// Auto-scroll to bottom when new messages arrive or during streaming
@@ -65,6 +78,7 @@ export function ChatWindow({
 	if (messages.length === 0 && !streaming) {
 		return (
 			<div className="flex flex-1 flex-col bg-white">
+				{bannerElement}
 				<div className="flex flex-1 items-center justify-center">
 					{hasDocument ? (
 						<div className="text-center">
@@ -73,7 +87,7 @@ export function ChatWindow({
 							</p>
 						</div>
 					) : (
-						<EmptyState onUpload={onUpload} />
+						<EmptyState onUpload={onUpload} uploading={uploading} />
 					)}
 				</div>
 				<ChatInput
@@ -81,6 +95,7 @@ export function ChatWindow({
 					onUpload={onUpload}
 					disabled={streaming}
 					hasDocument={hasDocument}
+					uploading={uploading}
 				/>
 			</div>
 		);
@@ -88,11 +103,7 @@ export function ChatWindow({
 
 	return (
 		<div className="flex flex-1 flex-col bg-white">
-			{error && (
-				<div className="mx-4 mt-2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
-					{error}
-				</div>
-			)}
+			{bannerElement}
 
 			<div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
 				<div className="mx-auto max-w-2xl space-y-1">
@@ -108,6 +119,7 @@ export function ChatWindow({
 				onUpload={onUpload}
 				disabled={streaming}
 				hasDocument={hasDocument}
+				uploading={uploading}
 			/>
 		</div>
 	);

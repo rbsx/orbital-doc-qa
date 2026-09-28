@@ -27,8 +27,10 @@ export function DocumentUpload({
 		(e: DragEvent) => {
 			e.preventDefault();
 			setDragOver(false);
+			// Let the server reject non-PDFs so the user sees why, rather than
+			// the drop silently doing nothing.
 			const file = e.dataTransfer.files[0];
-			if (file && file.type === "application/pdf") {
+			if (file) {
 				onUpload(file);
 			}
 		},

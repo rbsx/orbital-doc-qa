@@ -7,11 +7,20 @@ import type {
 
 const BASE = "/api";
 
-async function handleResponse<T>(response: Response): Promise<T> {
-	if (!response.ok) {
-		const text = await response.text().catch(() => "Unknown error");
-		throw new Error(`API error ${response.status}: ${text}`);
+// FastAPI puts user-facing messages in `detail`; show that rather than raw JSON.
+async function responseError(response: Response): Promise<Error> {
+	const text = await response.text().catch(() => "");
+	try {
+		const { detail } = JSON.parse(text) as { detail?: unknown };
+		if (typeof detail === "string") return new Error(detail);
+	} catch {
+		// Not JSON: fall back to the raw body
 	}
+	return new Error(`API error ${response.status}: ${text || "Unknown error"}`);
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+	if (!response.ok) throw await responseError(response);
 	return response.json() as Promise<T>;
 }
 
@@ -33,10 +42,7 @@ export async function deleteConversation(id: string): Promise<void> {
 	const res = await fetch(`${BASE}/conversations/${id}`, {
 		method: "DELETE",
 	});
-	if (!res.ok) {
-		const text = await res.text().catch(() => "Unknown error");
-		throw new Error(`API error ${res.status}: ${text}`);
-	}
+	if (!res.ok) throw await responseError(res);
 }
 
 export async function fetchConversation(
@@ -64,10 +70,7 @@ export async function sendMessage(
 		body: JSON.stringify({ content }),
 		signal,
 	});
-	if (!res.ok) {
-		const text = await res.text().catch(() => "Unknown error");
-		throw new Error(`API error ${res.status}: ${text}`);
-	}
+	if (!res.ok) throw await responseError(res);
 	return res;
 }
 
