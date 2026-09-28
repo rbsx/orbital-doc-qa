@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 
-import fitz  # PyMuPDF
+import pymupdf
 import structlog
 from fastapi import UploadFile
 from sqlalchemy import func, select
@@ -22,7 +22,7 @@ class PasswordProtectedError(ValueError):
 
 def _needs_password(content: bytes) -> bool:
     try:
-        with fitz.open(stream=content, filetype="pdf") as doc:
+        with pymupdf.open(stream=content, filetype="pdf") as doc:
             return bool(doc.needs_pass)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
     except Exception:
         return False  # not a readable PDF at all; extraction below handles that
@@ -92,13 +92,14 @@ async def upload_document(
     extracted_text = ""
     page_count = 0
     try:
-        doc = fitz.open(file_path)
+        doc = pymupdf.open(file_path)
         page_count = len(doc)
         pages: list[str] = []
         for page_num in range(page_count):
             page = doc[page_num]
-            text = page.get_text()  # type: ignore[union-attr]
-            if text.strip():
+            # PyMuPDF's get_text is only partly typed; "text" mode returns a str.
+            text: object = page.get_text("text")  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+            if isinstance(text, str) and text.strip():
                 pages.append(f"--- Page {page_num + 1} ---\n{text}")
         extracted_text = "\n\n".join(pages)
         doc.close()
