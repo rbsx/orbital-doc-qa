@@ -49,6 +49,7 @@ export function DocumentViewer({
 	const [pdfError, setPdfError] = useState<string | null>(null);
 	const [width, setWidth] = useState(DEFAULT_WIDTH);
 	const [dragging, setDragging] = useState(false);
+	const [panelExpanded, setPanelExpanded] = useState(true);
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	// Start each document's loading state fresh. The width deliberately
@@ -151,27 +152,32 @@ export function DocumentViewer({
 				activeId={document.id}
 				onOpen={(documentId) => onOpen({ documentId, page: 1 })}
 				onRemove={onRemove}
+				expanded={panelExpanded}
+				onToggle={() => setPanelExpanded((e) => !e)}
 			/>
 
-			{/* Header */}
-			<div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
-				<div className="flex min-w-0 items-start gap-2">
-					<span className="mt-0.5 flex-shrink-0 rounded bg-neutral-100 px-1.5 py-px font-mono text-[10px] font-medium text-neutral-600">
-						{document.label}
-					</span>
-					<div className="min-w-0">
-						<p
-							className="truncate text-sm font-medium text-neutral-800"
-							title={document.filename}
-						>
-							{document.filename}
-						</p>
-						<p className="text-xs text-neutral-400">
-							{document.page_count} page{document.page_count !== 1 ? "s" : ""}
-						</p>
+			{/* The open document's name, only needed when the panel above is
+			    collapsed: expanded, it already highlights the open document. */}
+			{!panelExpanded && (
+				<div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+					<div className="flex min-w-0 items-start gap-2">
+						<span className="mt-0.5 flex-shrink-0 rounded bg-neutral-100 px-1.5 py-px font-mono text-[10px] font-medium text-neutral-600">
+							{document.label}
+						</span>
+						<div className="min-w-0">
+							<p
+								className="truncate text-sm font-medium text-neutral-800"
+								title={document.filename}
+							>
+								{document.filename}
+							</p>
+							<p className="text-xs text-neutral-400">
+								{document.page_count} page{document.page_count !== 1 ? "s" : ""}
+							</p>
+						</div>
 					</div>
 				</div>
-			</div>
+			)}
 
 			{!document.has_text && (
 				<div className="flex gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">

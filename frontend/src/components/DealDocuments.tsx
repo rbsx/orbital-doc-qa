@@ -1,5 +1,5 @@
 import { AlertTriangle, ChevronRight, X } from "lucide-react";
-import { useId, useState } from "react";
+import { useId } from "react";
 import type { Document } from "../types";
 
 interface DealDocumentsProps {
@@ -7,6 +7,8 @@ interface DealDocumentsProps {
 	activeId: string | null;
 	onOpen: (documentId: string) => void;
 	onRemove: (documentId: string) => void;
+	expanded: boolean;
+	onToggle: () => void;
 }
 
 // The conversation's documents, above the PDF. Collapsible and capped in
@@ -16,8 +18,9 @@ export function DealDocuments({
 	activeId,
 	onOpen,
 	onRemove,
+	expanded,
+	onToggle,
 }: DealDocumentsProps) {
-	const [expanded, setExpanded] = useState(true);
 	const listId = useId();
 
 	return (
@@ -27,7 +30,7 @@ export function DealDocuments({
 				aria-expanded={expanded}
 				aria-controls={listId}
 				className="flex w-full items-center gap-1.5 px-4 py-2 text-left hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-neutral-400"
-				onClick={() => setExpanded((e) => !e)}
+				onClick={onToggle}
 			>
 				<ChevronRight
 					className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${
