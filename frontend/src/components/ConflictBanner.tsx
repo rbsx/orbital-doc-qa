@@ -3,6 +3,7 @@ import {
 	ChevronDown,
 	Loader2,
 	MessageSquareText,
+	ShieldCheck,
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { cn } from "../lib/utils";
@@ -95,8 +96,19 @@ export function ConflictBanner({
 		);
 	}
 
-	const conflicts = report?.status === "ready" ? report.conflicts : [];
-	if (conflicts.length === 0) return null;
+	if (report?.status !== "ready") return null;
+	const { conflicts } = report;
+
+	// Say so when the check ran and found nothing, so "all clear" can't be
+	// mistaken for "didn't run".
+	if (conflicts.length === 0) {
+		return (
+			<p className="mx-4 mt-2 flex items-center gap-1.5 px-1 text-xs text-neutral-400">
+				<ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+				No conflicts found across {documents.length} documents
+			</p>
+		);
+	}
 
 	const count = conflicts.length;
 	const filenames = new Map(documents.map((d) => [d.id, d.filename]));
