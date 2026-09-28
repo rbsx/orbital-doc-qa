@@ -62,8 +62,9 @@ export function DocumentViewer({ document, target }: DocumentViewerProps) {
 	if (target !== appliedTarget) {
 		setAppliedTarget(target);
 		if (target && target.documentId === document?.id) {
+			// Same page: its text is already loaded and won't be fetched again.
+			if (target.page !== currentPage) setPageItems([]);
 			setCurrentPage(target.page);
-			setPageItems([]);
 			setHighlight(
 				target.quote ? { page: target.page, quote: target.quote } : null,
 			);
