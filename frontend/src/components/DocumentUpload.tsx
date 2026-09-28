@@ -55,18 +55,7 @@ export function DocumentUpload({
 	);
 
 	return (
-		<button
-			type="button"
-			className={`w-full max-w-md cursor-pointer rounded-xl border-2 border-dashed px-8 py-10 text-center transition-colors ${
-				dragOver
-					? "border-neutral-400 bg-neutral-100"
-					: "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
-			}`}
-			onDragOver={handleDragOver}
-			onDragLeave={handleDragLeave}
-			onDrop={handleDrop}
-			onClick={handleClick}
-		>
+		<>
 			<input
 				ref={fileInputRef}
 				type="file"
@@ -74,25 +63,37 @@ export function DocumentUpload({
 				className="hidden"
 				onChange={handleFileChange}
 			/>
-
-			{uploading ? (
-				<div className="flex flex-col items-center">
-					<Loader2 className="mb-3 h-10 w-10 animate-spin text-neutral-400" />
-					<p className="text-sm font-medium text-neutral-600">
-						Uploading document...
-					</p>
-				</div>
-			) : (
-				<div className="flex flex-col items-center">
-					<Upload className="mb-3 h-10 w-10 text-neutral-400" />
-					<p className="text-sm font-medium text-neutral-600">
-						Upload a PDF document
-					</p>
-					<p className="mt-1 text-xs text-neutral-400">
-						Click or drag and drop
-					</p>
-				</div>
-			)}
-		</button>
+			<button
+				type="button"
+				className={`w-full max-w-md cursor-pointer rounded-xl border-2 border-dashed px-8 py-10 text-center transition-colors ${
+					dragOver
+						? "border-neutral-400 bg-neutral-100"
+						: "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
+				}`}
+				onDragOver={handleDragOver}
+				onDragLeave={handleDragLeave}
+				onDrop={handleDrop}
+				onClick={handleClick}
+			>
+				{uploading ? (
+					<div className="flex flex-col items-center">
+						<Loader2 className="mb-3 h-10 w-10 animate-spin text-neutral-400" />
+						<p className="text-sm font-medium text-neutral-600">
+							Uploading document...
+						</p>
+					</div>
+				) : (
+					<div className="flex flex-col items-center">
+						<Upload className="mb-3 h-10 w-10 text-neutral-400" />
+						<p className="text-sm font-medium text-neutral-600">
+							Upload a PDF document
+						</p>
+						<p className="mt-1 text-xs text-neutral-400">
+							Click or drag and drop
+						</p>
+					</div>
+				)}
+			</button>
+		</>
 	);
 }

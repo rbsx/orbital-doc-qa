@@ -74,6 +74,13 @@ export function ChatInput({
 								size="icon"
 								className="h-8 w-8 flex-shrink-0"
 								disabled={hasDocument || uploading}
+								aria-label={
+									uploading
+										? "Uploading document"
+										: hasDocument
+											? "Document already uploaded"
+											: "Attach a PDF"
+								}
 								onClick={() => fileInputRef.current?.click()}
 							>
 								{uploading ? (
@@ -114,6 +121,7 @@ export function ChatInput({
 					size="icon"
 					className="h-8 w-8 flex-shrink-0"
 					disabled={!value.trim() || disabled}
+					aria-label="Send message"
 					onClick={handleSend}
 				>
 					<SendHorizontal

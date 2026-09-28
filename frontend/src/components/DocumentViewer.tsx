@@ -174,6 +174,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 						size="icon"
 						className="h-7 w-7"
 						disabled={currentPage <= 1}
+						aria-label="Previous page"
 						onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
 					>
 						<ChevronLeft className="h-4 w-4" />
@@ -186,6 +187,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 						size="icon"
 						className="h-7 w-7"
 						disabled={currentPage >= numPages}
+						aria-label="Next page"
 						onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
 					>
 						<ChevronRight className="h-4 w-4" />
