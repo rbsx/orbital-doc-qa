@@ -62,6 +62,7 @@ export function ChatWindow({
 			onAsk={onSend}
 			askDisabled={streaming}
 			onOpenSource={onOpenSource}
+			documents={documents}
 		/>
 	);
 	// Upload errors are shown per file, next to the input they came from.

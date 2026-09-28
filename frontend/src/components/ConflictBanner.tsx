@@ -9,10 +9,10 @@ import { cn } from "../lib/utils";
 import type {
 	Conflict,
 	ConflictReport,
-	ConflictSource,
+	Document,
 	ViewerTarget,
 } from "../types";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { CitationChip } from "./CitationChip";
 
 // Don't flash the checking state for cached or not-applicable reports, which
 // come back almost immediately.
@@ -44,9 +44,11 @@ interface ConflictBannerProps {
 	onAsk: (question: string) => void;
 	askDisabled?: boolean;
 	onOpenSource?: (target: ViewerTarget) => void;
+	documents: Document[];
 }
 
 export function ConflictBanner({
+	documents,
 	report,
 	loading,
 	error,
@@ -97,6 +99,7 @@ export function ConflictBanner({
 	if (conflicts.length === 0) return null;
 
 	const count = conflicts.length;
+	const filenames = new Map(documents.map((d) => [d.id, d.filename]));
 	return (
 		<section
 			aria-label="Possible conflicts between documents"
@@ -140,6 +143,7 @@ export function ConflictBanner({
 							onAsk={onAsk}
 							askDisabled={askDisabled}
 							onOpenSource={onOpenSource}
+							filenames={filenames}
 						/>
 					))}
 				</ul>
@@ -153,11 +157,13 @@ function ConflictItem({
 	onAsk,
 	askDisabled,
 	onOpenSource,
+	filenames,
 }: {
 	conflict: Conflict;
 	onAsk: (question: string) => void;
 	askDisabled?: boolean;
 	onOpenSource?: (target: ViewerTarget) => void;
+	filenames: Map<string, string>;
 }) {
 	const severity = SEVERITY[conflict.severity];
 	return (
@@ -182,16 +188,30 @@ function ConflictItem({
 					<div className="mt-2 flex flex-wrap items-center gap-1.5">
 						<span className="sr-only">Sources:</span>
 						{conflict.sources.map((source) => (
-							<SourceChip
+							// Sources are verified on the server before a conflict is shown.
+							<CitationChip
 								key={`${source.document_id}-${source.page}-${source.quote}`}
-								source={source}
-								onOpenSource={onOpenSource}
+								label={source.label}
+								filename={filenames.get(source.document_id)}
+								page={source.page}
+								quote={source.quote}
+								citation={{ ...source, verified: true }}
+								onOpen={
+									onOpenSource
+										? () =>
+												onOpenSource({
+													documentId: source.document_id,
+													page: source.page,
+													quote: source.quote,
+												})
+										: undefined
+								}
 							/>
 						))}
 						<button
 							type="button"
 							disabled={askDisabled}
-							onClick={() => onAsk(explainQuestion(conflict))}
+							onClick={() => onAsk(explainQuestion(conflict, filenames))}
 							className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 disabled:pointer-events-none disabled:opacity-50"
 						>
 							<MessageSquareText className="h-3.5 w-3.5" aria-hidden="true" />
@@ -204,56 +224,16 @@ function ConflictItem({
 	);
 }
 
-function SourceChip({
-	source,
-	onOpenSource,
-}: {
-	source: ConflictSource;
-	onOpenSource?: (target: ViewerTarget) => void;
-}) {
-	const text = `${source.label} · p.${source.page}`;
-	const chipClass =
-		"inline-flex items-center rounded border border-neutral-200 bg-white px-1.5 py-0.5 font-mono text-[11px] text-neutral-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400";
-
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				{onOpenSource ? (
-					<button
-						type="button"
-						onClick={() =>
-							onOpenSource({
-								documentId: source.document_id,
-								page: source.page,
-								quote: source.quote,
-							})
-						}
-						aria-label={`Open ${source.label} page ${source.page}: “${source.quote}”`}
-						className={cn(
-							chipClass,
-							"hover:border-neutral-300 hover:text-neutral-900",
-						)}
-					>
-						{text}
-					</button>
-				) : (
-					// Not a control, but focusable so keyboard users can read the quote.
-					// biome-ignore lint/a11y/noNoninteractiveTabindex: focus reveals the quote tooltip
-					<span tabIndex={0} className={chipClass}>
-						{text}
-						<span className="sr-only">: “{source.quote}”</span>
-					</span>
-				)}
-			</TooltipTrigger>
-			<TooltipContent side="top" className="max-w-xs whitespace-normal">
-				“{source.quote}”
-			</TooltipContent>
-		</Tooltip>
-	);
-}
-
-function explainQuestion(conflict: Conflict): string {
-	const labels = [...new Set(conflict.sources.map((s) => s.label))];
+// Sent as the user's message, so it names the files rather than D1/D2 labels.
+function explainQuestion(
+	conflict: Conflict,
+	filenames: Map<string, string>,
+): string {
+	const labels = [
+		...new Set(
+			conflict.sources.map((s) => filenames.get(s.document_id) ?? s.label),
+		),
+	];
 	const between =
 		labels.length > 1
 			? `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`
