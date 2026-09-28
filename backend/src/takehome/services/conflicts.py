@@ -37,7 +37,7 @@ logger = structlog.get_logger()
 
 # Part of the cache key: bump it when the prompt or the verification changes so
 # stale reports are recomputed rather than served.
-ANALYSIS_VERSION = "3"
+ANALYSIS_VERSION = "4"
 
 Severity = Literal["high", "medium", "low"]
 
@@ -90,7 +90,10 @@ class _ProposedConflict(BaseModel):
     title: str = Field(description="Short neutral headline, at most about 8 words.")
     severity: Severity
     summary: str = Field(
-        description="One or two sentences: what each document says (by label) and why it matters."
+        description=(
+            "One or two sentences: what each document says (naming documents by type, "
+            "e.g. 'the lease', not by label) and why it matters."
+        )
     )
     sources: list[_ProposedSource] = Field(
         description="At least two quotes, from at least two different documents."
@@ -149,8 +152,9 @@ For each conflict:
 - severity: "high" if it could defeat or fundamentally change the deal (ownership, \
 authority to grant, permitted use, enforceability); "medium" if it affects value or key \
 commercial terms (area, rent, dates, term); "low" for minor factual mismatches;
-- summary: one or two plain sentences saying what each document says, referring to \
-documents by label (D1, D2, ...), and why it matters to the client;
+- summary: one or two plain sentences saying what each document says and why it \
+matters to the client. Refer to documents by what they are ("the lease", "the report on \
+title", "the survey"), never by label: labels are only for sources;
 - sources: at least two, from at least two different documents. Each is an exact \
 quote of the words that state the conflicting fact (not a heading), copied character \
 for character from the document text, at most about 25 words, from a single page, with \
