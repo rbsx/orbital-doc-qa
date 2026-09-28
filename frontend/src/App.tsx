@@ -111,6 +111,7 @@ export default function App() {
 					conversations={conversations}
 					selectedId={selectedId}
 					loading={conversationsLoading}
+					showDraft={selectedId === null && !conversationsLoading}
 					onSelect={select}
 					onCreate={handleNewChat}
 					onDelete={remove}

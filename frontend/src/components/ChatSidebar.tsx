@@ -9,6 +9,9 @@ interface ChatSidebarProps {
 	conversations: Conversation[];
 	selectedId: string | null;
 	loading: boolean;
+	// On the new-chat screen: a placeholder row shows where uploads will go.
+	// It only becomes a real conversation once something is uploaded or asked.
+	showDraft: boolean;
 	onSelect: (id: string) => void;
 	onCreate: () => void;
 	onDelete: (id: string) => void;
@@ -18,6 +21,7 @@ export function ChatSidebar({
 	conversations,
 	selectedId,
 	loading,
+	showDraft,
 	onSelect,
 	onCreate,
 	onDelete,
@@ -44,13 +48,34 @@ export function ChatSidebar({
 						</div>
 					)}
 
-					{!loading && conversations.length === 0 && (
+					{!loading && !showDraft && conversations.length === 0 && (
 						<p className="px-2 py-8 text-center text-xs text-neutral-400">
 							No conversations yet
 						</p>
 					)}
 
 					<AnimatePresence initial={false}>
+						{showDraft && (
+							<motion.div
+								key="draft"
+								initial={{ opacity: 0, height: 0 }}
+								animate={{ opacity: 1, height: "auto" }}
+								exit={{ opacity: 0, height: 0 }}
+								transition={{ duration: 0.15 }}
+							>
+								<div
+									aria-current="page"
+									className="rounded-lg bg-neutral-100 px-3 py-2.5"
+								>
+									<p className="truncate text-sm font-medium text-neutral-800">
+										New Conversation
+									</p>
+									<p className="mt-0.5 text-xs text-neutral-400">
+										Upload documents to start
+									</p>
+								</div>
+							</motion.div>
+						)}
 						{conversations.map((conversation) => (
 							<motion.div
 								key={conversation.id}
