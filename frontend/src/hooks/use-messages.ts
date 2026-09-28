@@ -60,6 +60,7 @@ export function useMessages(conversationId: string | null) {
 				role: "user",
 				content,
 				sources_cited: 0,
+				citations: [],
 				created_at: new Date().toISOString(),
 			};
 
@@ -141,6 +142,7 @@ export function useMessages(conversationId: string | null) {
 						role: "assistant",
 						content: accumulated,
 						sources_cited: 0,
+						citations: [],
 						created_at: new Date().toISOString(),
 					};
 					setMessages((prev) => [...prev, assistantMessage]);

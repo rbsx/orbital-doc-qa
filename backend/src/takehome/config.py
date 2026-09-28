@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     upload_dir: str = "uploads"
     max_upload_size: int = 25 * 1024 * 1024  # 25MB
+    # Every document goes into every chat prompt, so cap what a conversation can hold.
+    max_documents_per_conversation: int = 20
+    max_conversation_text_chars: int = 400_000  # roughly 100k tokens
 
     model_config = {"env_file": ".env"}
 

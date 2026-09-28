@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from datetime import datetime
 
 import structlog
@@ -9,9 +10,15 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import FileResponse
 
+from takehome.db.models import Document
 from takehome.db.session import get_session
 from takehome.services.conversation import get_conversation, touch_conversation
-from takehome.services.document import get_document, upload_document
+from takehome.services.document import (
+    get_document,
+    list_documents_for_conversation,
+    upload_document,
+)
+from takehome.services.document_context import document_labels, sort_documents
 
 logger = structlog.get_logger()
 
@@ -26,12 +33,30 @@ router = APIRouter(tags=["documents"])
 class DocumentOut(BaseModel):
     id: str
     conversation_id: str
+    label: str
     filename: str
     page_count: int
     has_text: bool
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+def documents_out(documents: Sequence[Document]) -> list[DocumentOut]:
+    """A conversation's documents as the API shows them: labelled, in label order."""
+    labels = document_labels(documents)
+    return [
+        DocumentOut(
+            id=doc.id,
+            conversation_id=doc.conversation_id,
+            label=labels[doc.id],
+            filename=doc.filename,
+            page_count=doc.page_count,
+            has_text=doc.extracted_text is not None,
+            uploaded_at=doc.uploaded_at,
+        )
+        for doc in sort_documents(documents)
+    ]
 
 
 # --------------------------------------------------------------------------- #
@@ -49,10 +74,10 @@ async def upload_document_endpoint(
     file: UploadFile,
     session: AsyncSession = Depends(get_session),
 ) -> DocumentOut:
-    """Upload a PDF document for a conversation.
+    """Add a PDF document to a conversation.
 
-    Only one document per conversation is allowed. Returns 409 if a document
-    already exists.
+    One file per request, so the client can report progress and errors per file.
+    Returns 400 if the file isn't a PDF or would exceed the conversation's limits.
     """
     # Verify the conversation exists
     conversation = await get_conversation(session, conversation_id)
@@ -62,10 +87,7 @@ async def upload_document_endpoint(
     try:
         document = await upload_document(session, conversation_id, file)
     except ValueError as e:
-        error_message = str(e)
-        if "already has a document" in error_message:
-            raise HTTPException(status_code=409, detail=error_message)
-        raise HTTPException(status_code=400, detail=error_message)
+        raise HTTPException(status_code=400, detail=str(e))
 
     await touch_conversation(session, conversation_id)
 
@@ -76,14 +98,9 @@ async def upload_document_endpoint(
         filename=document.filename,
     )
 
-    return DocumentOut(
-        id=document.id,
-        conversation_id=document.conversation_id,
-        filename=document.filename,
-        page_count=document.page_count,
-        has_text=document.extracted_text is not None,
-        uploaded_at=document.uploaded_at,
-    )
+    # The label depends on the documents already in the conversation.
+    documents = await list_documents_for_conversation(session, conversation_id)
+    return next(d for d in documents_out(documents) if d.id == document.id)
 
 
 @router.get("/api/documents/{document_id}/content")

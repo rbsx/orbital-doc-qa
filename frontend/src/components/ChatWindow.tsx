@@ -1,11 +1,13 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useConflicts } from "../hooks/use-conflicts";
-import type { Message, ViewerTarget } from "../types";
+import type { PendingUpload } from "../hooks/use-documents";
+import type { Document, Message, ViewerTarget } from "../types";
 import { ChatInput } from "./ChatInput";
 import { ConflictBanner } from "./ConflictBanner";
 import { EmptyState } from "./EmptyState";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
+import { UploadProgress } from "./UploadProgress";
 
 interface ChatWindowProps {
 	messages: Message[];
@@ -13,15 +15,15 @@ interface ChatWindowProps {
 	error: string | null;
 	streaming: boolean;
 	streamingContent: string;
-	hasDocument: boolean;
+	documents: Document[];
+	uploads: PendingUpload[];
 	uploading: boolean;
-	uploadError: string | null;
 	conversationId: string | null;
 	// Changes whenever the conversation's set of documents does; drives the conflict check.
-	documentsKey: string;
 	onSend: (content: string) => void;
-	onUpload: (file: File) => void;
-	onOpenSource?: (target: ViewerTarget) => void;
+	onUpload: (files: File[]) => void;
+	onDismissUpload: (key: string) => void;
+	onOpenSource: (target: ViewerTarget) => void;
 }
 
 export function ChatWindow({
@@ -30,24 +32,26 @@ export function ChatWindow({
 	error,
 	streaming,
 	streamingContent,
-	hasDocument,
+	documents,
+	uploads,
 	uploading,
-	uploadError,
 	conversationId,
-	documentsKey,
 	onSend,
 	onUpload,
+	onDismissUpload,
 	onOpenSource,
 }: ChatWindowProps) {
-	const banner = uploadError ?? error;
-	const bannerElement = banner && (
+	const documentCount = documents.length;
+	const bannerElement = error && (
 		<div
 			role="alert"
 			className="mx-4 mt-2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600"
 		>
-			{banner}
+			{error}
 		</div>
 	);
+	// Re-checked for conflicts whenever the set of documents changes.
+	const documentsKey = documents.map((d) => d.id).join(",");
 	const conflicts = useConflicts(conversationId, documentsKey);
 	const conflictBanner = (
 		<ConflictBanner
@@ -58,6 +62,18 @@ export function ChatWindow({
 			onAsk={onSend}
 			askDisabled={streaming}
 			onOpenSource={onOpenSource}
+		/>
+	);
+	// Upload errors are shown per file, next to the input they came from.
+	const chatInput = (
+		<ChatInput
+			onSend={onSend}
+			onUpload={onUpload}
+			disabled={streaming}
+			uploading={uploading}
+			attachments={
+				<UploadProgress uploads={uploads} onDismiss={onDismissUpload} />
+			}
 		/>
 	);
 	const scrollRef = useRef<HTMLDivElement>(null);
@@ -100,23 +116,20 @@ export function ChatWindow({
 				{bannerElement}
 				{conflictBanner}
 				<div className="flex flex-1 items-center justify-center">
-					{hasDocument ? (
+					{documentCount > 0 ? (
 						<div className="text-center">
 							<p className="text-sm text-neutral-500">
-								Document uploaded. Ask a question to get started.
+								{documentCount === 1
+									? "1 document uploaded."
+									: `${documentCount} documents uploaded.`}{" "}
+								Ask a question to get started.
 							</p>
 						</div>
 					) : (
 						<EmptyState onUpload={onUpload} uploading={uploading} />
 					)}
 				</div>
-				<ChatInput
-					onSend={onSend}
-					onUpload={onUpload}
-					disabled={streaming}
-					hasDocument={hasDocument}
-					uploading={uploading}
-				/>
+				{chatInput}
 			</div>
 		);
 	}
@@ -129,19 +142,20 @@ export function ChatWindow({
 			<div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
 				<div className="mx-auto max-w-2xl space-y-1">
 					{messages.map((message) => (
-						<MessageBubble key={message.id} message={message} />
+						<MessageBubble
+							key={message.id}
+							message={message}
+							documents={documents}
+							onOpenSource={onOpenSource}
+						/>
 					))}
-					{streaming && <StreamingBubble content={streamingContent} />}
+					{streaming && (
+						<StreamingBubble content={streamingContent} documents={documents} />
+					)}
 				</div>
 			</div>
 
-			<ChatInput
-				onSend={onSend}
-				onUpload={onUpload}
-				disabled={streaming}
-				hasDocument={hasDocument}
-				uploading={uploading}
-			/>
+			{chatInput}
 		</div>
 	);
 }
