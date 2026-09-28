@@ -65,6 +65,9 @@ class Document(Base):
     file_path: Mapped[str] = mapped_column(String)
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     page_count: Mapped[int] = mapped_column(Integer, default=0)
+    # Its number within the conversation (the "2" in D2): set at upload and never
+    # reused, so removing a document can't re-point old citations at another.
+    position: Mapped[int] = mapped_column(Integer)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     conversation: Mapped[Conversation] = relationship(back_populates="documents")

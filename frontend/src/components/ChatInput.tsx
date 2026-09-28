@@ -113,7 +113,7 @@ export function ChatInput({
 					onKeyDown={handleKeyDown}
 					placeholder="Ask a question about your documents..."
 					rows={1}
-					className="max-h-[200px] min-h-[36px] flex-1 resize-none bg-transparent py-1.5 text-sm text-neutral-800 placeholder-neutral-400 outline-none"
+					className="max-h-[200px] min-h-[32px] flex-1 resize-none bg-transparent py-1.5 text-sm leading-5 text-neutral-800 placeholder-neutral-400 outline-none"
 					disabled={disabled}
 				/>
 

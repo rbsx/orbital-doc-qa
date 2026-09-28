@@ -33,6 +33,7 @@ export default function App() {
 		uploads,
 		uploading,
 		upload,
+		remove: removeDocument,
 		dismiss: dismissUpload,
 	} = useDocuments(selectedId);
 
@@ -104,6 +105,15 @@ export default function App() {
 
 	const handleNewChat = useCallback(() => select(null), [select]);
 
+	const handleRemoveDocument = useCallback(
+		async (documentId: string) => {
+			await removeDocument(documentId);
+			// Picks up the new document count in the sidebar.
+			refreshConversations();
+		},
+		[removeDocument, refreshConversations],
+	);
+
 	return (
 		<TooltipProvider delayDuration={200}>
 			<div className="flex h-screen bg-neutral-50">
@@ -140,6 +150,7 @@ export default function App() {
 					quote={targeted ? viewerTarget?.quote : undefined}
 					onPageChange={handlePageChange}
 					onOpen={openSource}
+					onRemove={handleRemoveDocument}
 				/>
 			</div>
 		</TooltipProvider>

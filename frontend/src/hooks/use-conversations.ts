@@ -53,6 +53,9 @@ export function useConversations() {
 	// else stay on the upload screen.
 	useEffect(() => {
 		refresh().then((data) => {
+			// A failed load (e.g. the server restarting) isn't "no conversations":
+			// don't pick anything, and don't forget what to reopen next time.
+			if (!data) return;
 			const last = readLastConversationId();
 			const reopen = data?.find((c) => c.id === last) ?? data?.[0];
 			setSelectedId(reopen?.id ?? null);

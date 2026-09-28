@@ -31,9 +31,11 @@ export function CitationChip({
 
 	const status = pending
 		? "Checking source…"
-		: unverified
-			? "Quote not found on this page. Check before relying on it."
-			: "Verified against the document";
+		: !citation.document_id
+			? "This document is no longer in the conversation."
+			: unverified
+				? "Quote not found on this page. Check before relying on it."
+				: "Verified against the document";
 
 	return (
 		<Tooltip>

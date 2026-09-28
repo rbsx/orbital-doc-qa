@@ -4,6 +4,7 @@ import {
 	Loader2,
 	MessageSquareText,
 	ShieldCheck,
+	X,
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { cn } from "../lib/utils";
@@ -59,6 +60,9 @@ export function ConflictBanner({
 	onOpenSource,
 }: ConflictBannerProps) {
 	const [expanded, setExpanded] = useState(false);
+	// The all-clear notice can be dismissed; it comes back if the documents change.
+	const documentsKey = documents.map((d) => d.id).join(",");
+	const [dismissedKey, setDismissedKey] = useState<string | null>(null);
 	const [showChecking, setShowChecking] = useState(false);
 	const listId = useId();
 
@@ -102,11 +106,25 @@ export function ConflictBanner({
 	// Say so when the check ran and found nothing, so "all clear" can't be
 	// mistaken for "didn't run".
 	if (conflicts.length === 0) {
+		if (dismissedKey === documentsKey) return null;
 		return (
-			<p className="mx-4 mt-2 flex items-center gap-1.5 px-1 text-xs text-neutral-400">
-				<ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-				No conflicts found across {documents.length} documents
-			</p>
+			<output className="mx-4 mt-2 flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-600">
+				<ShieldCheck
+					className="h-4 w-4 flex-shrink-0 text-emerald-600"
+					aria-hidden="true"
+				/>
+				<span className="flex-1">
+					No conflicts found across {documents.length} documents
+				</span>
+				<button
+					type="button"
+					aria-label="Dismiss"
+					onClick={() => setDismissedKey(documentsKey)}
+					className="rounded p-0.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400"
+				>
+					<X className="h-4 w-4" />
+				</button>
+			</output>
 		);
 	}
 

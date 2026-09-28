@@ -40,7 +40,9 @@ async def upload_document(
     past its document or text limits (every document is sent with every question),
     and PasswordProtectedError if it needs a password to open.
     """
-    existing_count, existing_chars = await _conversation_text_usage(session, conversation_id)
+    existing_count, existing_chars, last_position = await _conversation_text_usage(
+        session, conversation_id
+    )
     if existing_count >= settings.max_documents_per_conversation:
         raise ValueError(
             f"This conversation already has {existing_count} documents, the most it can hold. "
@@ -127,6 +129,7 @@ async def upload_document(
         file_path=file_path,
         extracted_text=extracted_text if extracted_text else None,
         page_count=page_count,
+        position=last_position + 1,
     )
     session.add(document)
     await session.commit()
@@ -152,11 +155,28 @@ async def list_documents_for_conversation(
 
 async def _conversation_text_usage(
     session: AsyncSession, conversation_id: str
-) -> tuple[int, int]:
-    """How many documents a conversation has and how much extracted text they hold."""
+) -> tuple[int, int, int]:
+    """How many documents a conversation has, how much extracted text they hold,
+    and the highest position used so far (positions are never reused)."""
     stmt = select(
         func.count(Document.id),
         func.coalesce(func.sum(func.length(Document.extracted_text)), 0),
+        func.coalesce(func.max(Document.position), 0),
     ).where(Document.conversation_id == conversation_id)
-    count, chars = (await session.execute(stmt)).one()
-    return int(count), int(chars)
+    count, chars, last_position = (await session.execute(stmt)).one()
+    return int(count), int(chars), int(last_position)
+
+
+async def delete_document(session: AsyncSession, document: Document) -> None:
+    """Remove a document from its conversation, and its file from disk.
+
+    Its label isn't reused, so earlier answers that cited it show the source as
+    removed rather than pointing at a different document.
+    """
+    file_path = document.file_path
+    await session.delete(document)
+    await session.commit()
+    try:
+        os.remove(file_path)
+    except FileNotFoundError:
+        logger.warning("Uploaded file already gone", path=file_path)

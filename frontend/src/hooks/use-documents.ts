@@ -139,6 +139,18 @@ export function useDocuments(conversationId: string | null) {
 		[currentId],
 	);
 
+	const remove = useCallback(async (documentId: string) => {
+		try {
+			setError(null);
+			await api.deleteDocument(documentId);
+			setDocuments((prev) => prev.filter((d) => d.id !== documentId));
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Failed to remove document",
+			);
+		}
+	}, []);
+
 	const dismiss = useCallback((key: string) => {
 		setPending((prev) => prev.filter((p) => p.key !== key));
 	}, []);
@@ -151,6 +163,7 @@ export function useDocuments(conversationId: string | null) {
 		uploading: uploads.some((p) => p.status !== "error"),
 		error,
 		upload,
+		remove,
 		dismiss,
 		refresh,
 	};
