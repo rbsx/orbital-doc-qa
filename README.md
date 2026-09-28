@@ -1,6 +1,6 @@
 # Orbital — Product Engineering Take-Home
 
-**Loom walkthrough:** _link to be added_
+**Loom walkthrough (3 min):** https://www.loom.com/share/326f1fa21425497299b43e143e132052
 
 A document Q&A tool for commercial real estate lawyers, extended so they can **trust an answer and check it in one click**, **work across a whole deal's documents**, and **see where those documents disagree**.
 
