@@ -14,6 +14,10 @@ const FOLDS: Record<string, string> = {
 	"—": "-",
 };
 
+// Ignored when matching: whitespace (pdf.js spacing doesn't match the extracted
+// text) and colons (which the model adds between a table's label and value).
+const SKIPPED = /[\s:]/;
+
 function fold(char: string): string {
 	return (FOLDS[char] ?? char).toLowerCase();
 }
@@ -56,7 +60,7 @@ function findContiguous(
 ): HighlightRanges {
 	const ranges: HighlightRanges = new Map();
 	const needle = Array.from(quote)
-		.filter((c) => !/\s/.test(c))
+		.filter((c) => !SKIPPED.test(c))
 		.map(fold)
 		.join("");
 	if (!needle) return ranges;
@@ -67,7 +71,7 @@ function findContiguous(
 	items.forEach((str, item) => {
 		for (let char = 0; char < str.length; char++) {
 			const c = str.charAt(char);
-			if (/\s/.test(c)) continue;
+			if (SKIPPED.test(c)) continue;
 			haystack += fold(c);
 			origin.push([item, char]);
 		}

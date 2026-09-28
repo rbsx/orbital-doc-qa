@@ -31,7 +31,7 @@ With more time, I'd do these next:
 
 ## Decisions and trade-offs worth knowing
 
-- **Citations are checked when messages are read, not stored.** Checking is cheap, needs no migration, and always reflects the documents currently in the conversation. The matching ignores case, line breaks and quote-mark style, because PDF extraction breaks lines and the model re-flows them. It also verifies table quotes cell by cell (`"10,105", "938.8"`).
+- **Citations are checked when messages are read, not stored.** Checking is cheap, needs no migration, and always reflects the documents currently in the conversation. The matching ignores case, line breaks and quote-mark style, because PDF extraction breaks lines and the model re-flows them. It also verifies table quotes cell by cell (`"10,105", "938.8"`), ignores colons the model inserts between a table's label and value, and re-points a verbatim quote cited under the wrong page to the page it's actually on.
 - **Chips show document names; the model uses labels.** `[[D2 p4: "…"]]` is short and unambiguous for the model; readers see "Report on title 100… · p.4".
 - **Labels never shift.** Each document stores its position at upload and positions are never reused. Removing D2 leaves D1 and D3, so old citations can't silently point at a different file.
 - **Highlighting maps the quote onto pdf.js's text layer, ignoring whitespace.** pdf.js splits pages into text runs that don't match the extracted text. Visually the band is extended to sit on the printed line, since the invisible text layer uses a fallback font.

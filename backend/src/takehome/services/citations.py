@@ -12,7 +12,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from takehome.db.models import Document
-from takehome.services.document_context import document_labels, quote_on_page
+from takehome.services.document_context import document_labels, pages_with_quote, quote_on_page
 
 # Lenient on spacing and "p4" vs "p. 4"; the quote runs to the closing `"]]`.
 CITATION_PATTERN = re.compile(r'\[\[\s*(D\d+)\s+p\.?\s*(\d+)\s*:\s*"(.+?)"\s*\]\]', re.DOTALL)
@@ -39,17 +39,28 @@ def extract_citations(answer: str, documents: Sequence[Document]) -> list[Citati
     for match in CITATION_PATTERN.finditer(answer):
         label, page, quote = match.group(1), int(match.group(2)), match.group(3).strip()
         document = by_label.get(label)
+        verified = False
+        if document is not None:
+            fragments = FRAGMENT_SEPARATOR.split(quote)
+            verified = all(quote_on_page(document, page, f) for f in fragments)
+            if not verified:
+                # A verbatim quote under the wrong page number (e.g. the landlord's
+                # name cited from the definitions page but quoted from the cover):
+                # point at the page it's really on rather than calling it unverified.
+                elsewhere = pages_with_quote(document, fragments[0])
+                page_found = next(
+                    (p for p in elsewhere if all(quote_on_page(document, p, f) for f in fragments)),
+                    None,
+                )
+                if page_found is not None:
+                    page, verified = page_found, True
         citations.append(
             Citation(
                 document_id=document.id if document else None,
                 label=label,
                 page=page,
                 quote=quote,
-                verified=document is not None
-                and all(
-                    quote_on_page(document, page, fragment)
-                    for fragment in FRAGMENT_SEPARATOR.split(quote)
-                ),
+                verified=verified,
             )
         )
     return citations
