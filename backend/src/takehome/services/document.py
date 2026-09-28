@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from takehome.config import settings
 from takehome.db.models import Document
+from takehome.services.document_context import sort_documents
 
 logger = structlog.get_logger()
 
@@ -26,8 +27,8 @@ async def upload_document(
     Raises ValueError if the conversation already has a document or the file is not a PDF.
     """
     # Check if conversation already has a document
-    existing = await get_document_for_conversation(session, conversation_id)
-    if existing is not None:
+    existing = await list_documents_for_conversation(session, conversation_id)
+    if existing:
         raise ValueError("Conversation already has a document. Only one document per conversation is allowed.")
 
     # Validate file type
@@ -105,10 +106,10 @@ async def get_document(session: AsyncSession, document_id: str) -> Document | No
     return result.scalar_one_or_none()
 
 
-async def get_document_for_conversation(
+async def list_documents_for_conversation(
     session: AsyncSession, conversation_id: str
-) -> Document | None:
-    """Get the document for a conversation, if one exists."""
+) -> list[Document]:
+    """A conversation's documents in label order (D1, D2, …)."""
     stmt = select(Document).where(Document.conversation_id == conversation_id)
     result = await session.execute(stmt)
-    return result.scalar_one_or_none()
+    return sort_documents(result.scalars().all())

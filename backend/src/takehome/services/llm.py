@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import re
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 
 from pydantic_ai import Agent
 
 from takehome.config import settings  # noqa: F401 — triggers ANTHROPIC_API_KEY export
+from takehome.db.models import Document
+from takehome.services.document_context import format_documents
 
 agent = Agent(
     "anthropic:claude-haiku-4-5-20251001",
@@ -37,34 +39,38 @@ async def generate_title(user_message: str) -> str:
 
 async def chat_with_document(
     user_message: str,
-    document_text: str | None,
+    documents: Sequence[Document],
     conversation_history: list[dict[str, str]],
-    has_document: bool = False,
 ) -> AsyncIterator[str]:
     """Stream a response to the user's message, yielding text chunks.
 
-    Builds a prompt that includes document context and conversation history,
-    then streams the response from the LLM.
+    Builds a prompt that includes every document in the conversation and the
+    conversation history, then streams the response from the LLM.
     """
     # Build the full prompt with context
     prompt_parts: list[str] = []
 
     # Add document context if available
-    if document_text:
+    if any(doc.extracted_text for doc in documents):
         prompt_parts.append(
-            "The following is the content of the document being discussed:\n\n"
-            "<document>\n"
-            f"{document_text}\n"
-            "</document>\n"
+            f"The following {len(documents)} document(s) have been uploaded to this conversation. "
+            "Each is wrapped in a <document> tag with its label (D1, D2, …) and filename; "
+            "refer to documents by label and filename, and make clear which document each "
+            "point comes from. Answer across all of them where relevant.\n"
+            'Documents marked has_text="false" have no text layer (most likely scans), so you '
+            "cannot read them; if the user asks about one, say so and suggest a PDF with "
+            "selectable text.\n\n"
+            f"{format_documents(documents)}\n"
         )
-    elif has_document:
-        # e.g. a scanned PDF with no text layer: the user can see it in the viewer,
+    elif documents:
+        # e.g. scanned PDFs with no text layer: the user can see them in the viewer,
         # so "no document uploaded" would be wrong and confusing.
         prompt_parts.append(
-            "A document has been uploaded, but no text could be extracted from it "
-            "(it is most likely a scanned image), so you cannot read its contents. "
-            "If the user asks about it, explain this and suggest uploading a PDF "
-            "with selectable text (only PDFs are supported).\n"
+            f"{len(documents)} document(s) have been uploaded, but no text could be extracted "
+            "from any of them (they are most likely scanned images), so you cannot read their "
+            "contents. If the user asks about them, explain this and suggest uploading PDFs "
+            "with selectable text (only PDFs are supported).\n\n"
+            f"{format_documents(documents)}\n"
         )
     else:
         prompt_parts.append(
