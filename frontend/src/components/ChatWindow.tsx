@@ -1,7 +1,8 @@
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useConflicts } from "../hooks/use-conflicts";
 import type { PendingUpload } from "../hooks/use-documents";
+import { suggestedQuestions } from "../lib/suggestions";
 import type { Document, Message, ViewerTarget } from "../types";
 import { ChatInput } from "./ChatInput";
 import { ConflictBanner } from "./ConflictBanner";
@@ -106,13 +107,30 @@ export function ChatWindow({
 				{conflictBanner}
 				<div className="flex flex-1 items-center justify-center">
 					{documentCount > 0 ? (
-						<div className="text-center">
+						<div className="flex w-full max-w-md flex-col items-center px-4">
 							<p className="text-sm text-neutral-500">
 								{documentCount === 1
-									? "1 document uploaded."
-									: `${documentCount} documents uploaded.`}{" "}
-								Ask a question to get started.
+									? "1 document ready."
+									: `${documentCount} documents ready.`}{" "}
+								Ask anything, or start with:
 							</p>
+							<ul className="mt-4 flex w-full flex-col gap-2">
+								{suggestedQuestions(documents.map((d) => d.filename)).map(
+									(question) => (
+										<li key={question}>
+											<button
+												type="button"
+												disabled={streaming}
+												onClick={() => onSend(question)}
+												className="group flex w-full items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-left text-sm text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400 disabled:opacity-50"
+											>
+												<span className="flex-1">{question}</span>
+												<ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-neutral-300 transition-colors group-hover:text-neutral-500" />
+											</button>
+										</li>
+									),
+								)}
+							</ul>
 						</div>
 					) : (
 						<EmptyState onUpload={onUpload} uploading={uploading} />

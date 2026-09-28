@@ -27,6 +27,9 @@ agent = Agent(
         'written notice"]] of its intention.\n'
         "  Right: The tenant must give at least six months' written notice of its intention "
         '[[D1 p7: "not less than six months\' written notice"]].\n'
+        "  This applies to short answers too. Wrong: The registered owner is "
+        '[[D2 p1: "ACME HOLDINGS LIMITED"]]. Right: The registered owner is Acme Holdings '
+        'Limited [[D2 p1: "ACME HOLDINGS LIMITED"]].\n'
         "- The quote is copied verbatim from that page of that document: a short span "
         "(about 5-25 words) containing the specific fact the claim relies on (the figure, "
         "date, party or obligation itself, not a cross-reference to it). Never paraphrase "

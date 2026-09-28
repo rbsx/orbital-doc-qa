@@ -17,6 +17,10 @@ from takehome.services.document_context import document_labels, quote_on_page
 # Lenient on spacing and "p4" vs "p. 4"; the quote runs to the closing `"]]`.
 CITATION_PATTERN = re.compile(r'\[\[\s*(D\d+)\s+p\.?\s*(\d+)\s*:\s*"(.+?)"\s*\]\]', re.DOTALL)
 
+# Table figures are extracted one cell per line, so the model quotes several
+# cells as "10,105", "938.8": each fragment has to be on the page.
+FRAGMENT_SEPARATOR = re.compile(r'"\s*,\s*"')
+
 
 @dataclass(frozen=True)
 class Citation:
@@ -41,7 +45,11 @@ def extract_citations(answer: str, documents: Sequence[Document]) -> list[Citati
                 label=label,
                 page=page,
                 quote=quote,
-                verified=document is not None and quote_on_page(document, page, quote),
+                verified=document is not None
+                and all(
+                    quote_on_page(document, page, fragment)
+                    for fragment in FRAGMENT_SEPARATOR.split(quote)
+                ),
             )
         )
     return citations
