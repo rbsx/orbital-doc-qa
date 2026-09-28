@@ -13,11 +13,12 @@ from takehome.db.models import Document
 
 _PAGE_MARKER = re.compile(r"^--- Page (\d+) ---$", re.MULTILINE)
 
-# Variants the model changes when quoting: curly vs straight punctuation, and double
-# quotes inside a quote, which it swaps for single ones because the citation marker
-# itself is wrapped in double quotes.
+# Variants the model changes when quoting: curly vs straight punctuation, double
+# quotes inside a quote (swapped for single ones because the citation marker itself
+# is wrapped in double quotes), and colons it adds between a table's label and value
+# cells ("Registered proprietor: Bishopsgate…").
 _CHAR_FOLDS = str.maketrans(
-    {"‘": "'", "’": "'", "“": "'", "”": "'", '"': "'", "–": "-", "—": "-"}
+    {"‘": "'", "’": "'", "“": "'", "”": "'", '"': "'", "–": "-", "—": "-", ":": " "}
 )
 
 
@@ -77,3 +78,8 @@ def quote_on_page(document: Document, page: int, quote: str) -> bool:
     if not needle:
         return False
     return needle in normalize_for_match(page_texts(document).get(page, ""))
+
+
+def pages_with_quote(document: Document, quote: str) -> list[int]:
+    """Every page of `document` that contains `quote`, in page order."""
+    return [page for page in sorted(page_texts(document)) if quote_on_page(document, page, quote)]
