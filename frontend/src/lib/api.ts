@@ -1,4 +1,5 @@
 import type {
+	ConflictReport,
 	Conversation,
 	ConversationDetail,
 	Document,
@@ -85,6 +86,18 @@ export async function uploadDocument(
 		body: formData,
 	});
 	return handleResponse<Document>(res);
+}
+
+// Slow on first call for a set of documents (the backend runs the analysis),
+// instant afterwards.
+export async function fetchConflicts(
+	conversationId: string,
+	signal?: AbortSignal,
+): Promise<ConflictReport> {
+	const res = await fetch(`${BASE}/conversations/${conversationId}/conflicts`, {
+		signal,
+	});
+	return handleResponse<ConflictReport>(res);
 }
 
 export function getDocumentUrl(documentId: string): string {

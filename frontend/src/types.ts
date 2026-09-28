@@ -27,3 +27,31 @@ export interface Document {
 export interface ConversationDetail extends Conversation {
 	document?: Document;
 }
+
+// What the document viewer should show; see docs/CONTRACT.md §4.
+export interface ViewerTarget {
+	documentId: string;
+	page: number; // 1-based
+	quote?: string; // text to highlight on that page
+}
+
+// Conflict check API; see docs/CONTRACT.md §5.
+export interface ConflictSource {
+	document_id: string;
+	label: string;
+	page: number;
+	quote: string;
+}
+
+export interface Conflict {
+	id: string;
+	title: string;
+	severity: "high" | "medium" | "low";
+	summary: string;
+	sources: ConflictSource[];
+}
+
+export interface ConflictReport {
+	status: "not_applicable" | "ready";
+	conflicts: Conflict[];
+}
