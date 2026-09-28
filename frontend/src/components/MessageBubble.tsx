@@ -49,12 +49,14 @@ function Answer({
 				const marker = markers[index];
 				if (!marker) return null;
 				const citation = citations?.[index];
+				// The server corrects the page when the quote is verbatim elsewhere.
+				const page = citation?.page ?? marker.page;
 				const documentId = citation?.document_id;
 				return (
 					<CitationChip
 						label={marker.label}
 						filename={filenames.get(marker.label)}
-						page={marker.page}
+						page={page}
 						quote={marker.quote}
 						citation={citation}
 						onOpen={
@@ -62,7 +64,7 @@ function Answer({
 								? () =>
 										onOpenSource({
 											documentId,
-											page: marker.page,
+											page,
 											quote: marker.quote,
 										})
 								: undefined
