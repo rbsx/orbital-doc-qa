@@ -1,7 +1,9 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
-import type { Message } from "../types";
+import { useConflicts } from "../hooks/use-conflicts";
+import type { Message, ViewerTarget } from "../types";
 import { ChatInput } from "./ChatInput";
+import { ConflictBanner } from "./ConflictBanner";
 import { EmptyState } from "./EmptyState";
 import { MessageBubble, StreamingBubble } from "./MessageBubble";
 
@@ -15,8 +17,11 @@ interface ChatWindowProps {
 	uploading: boolean;
 	uploadError: string | null;
 	conversationId: string | null;
+	// Changes whenever the conversation's set of documents does; drives the conflict check.
+	documentsKey: string;
 	onSend: (content: string) => void;
 	onUpload: (file: File) => void;
+	onOpenSource?: (target: ViewerTarget) => void;
 }
 
 export function ChatWindow({
@@ -29,8 +34,10 @@ export function ChatWindow({
 	uploading,
 	uploadError,
 	conversationId,
+	documentsKey,
 	onSend,
 	onUpload,
+	onOpenSource,
 }: ChatWindowProps) {
 	const banner = uploadError ?? error;
 	const bannerElement = banner && (
@@ -40,6 +47,18 @@ export function ChatWindow({
 		>
 			{banner}
 		</div>
+	);
+	const conflicts = useConflicts(conversationId, documentsKey);
+	const conflictBanner = (
+		<ConflictBanner
+			report={conflicts.report}
+			loading={conflicts.loading}
+			error={conflicts.error}
+			onRetry={conflicts.retry}
+			onAsk={onSend}
+			askDisabled={streaming}
+			onOpenSource={onOpenSource}
+		/>
 	);
 	const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -79,6 +98,7 @@ export function ChatWindow({
 		return (
 			<div className="flex flex-1 flex-col bg-white">
 				{bannerElement}
+				{conflictBanner}
 				<div className="flex flex-1 items-center justify-center">
 					{hasDocument ? (
 						<div className="text-center">
@@ -104,6 +124,7 @@ export function ChatWindow({
 	return (
 		<div className="flex flex-1 flex-col bg-white">
 			{bannerElement}
+			{conflictBanner}
 
 			<div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4">
 				<div className="mx-auto max-w-2xl space-y-1">

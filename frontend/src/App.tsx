@@ -80,6 +80,7 @@ export default function App() {
 					uploading={uploading}
 					uploadError={uploadError}
 					conversationId={selectedId}
+					documentsKey={document?.id ?? ""}
 					onSend={handleSend}
 					onUpload={handleUpload}
 				/>
