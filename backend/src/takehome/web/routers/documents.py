@@ -14,6 +14,7 @@ from takehome.db.models import Document
 from takehome.db.session import get_session
 from takehome.services.conversation import get_conversation, touch_conversation
 from takehome.services.document import (
+    PasswordProtectedError,
     get_document,
     list_documents_for_conversation,
     upload_document,
@@ -86,6 +87,11 @@ async def upload_document_endpoint(
 
     try:
         document = await upload_document(session, conversation_id, file)
+    except PasswordProtectedError as e:
+        # A code as well as the message, so the UI can show a locked state.
+        raise HTTPException(
+            status_code=400, detail={"code": "password_protected", "message": str(e)}
+        ) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
