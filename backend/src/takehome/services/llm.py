@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from collections.abc import AsyncIterator
 
 from pydantic_ai import Agent
@@ -10,21 +9,37 @@ from takehome.config import settings  # noqa: F401 — triggers ANTHROPIC_API_KE
 agent = Agent(
     "anthropic:claude-haiku-4-5-20251001",
     system_prompt=(
-        "You are a helpful legal document assistant for commercial real estate lawyers. "
-        "You help lawyers review and understand documents during due diligence.\n\n"
-        "IMPORTANT INSTRUCTIONS:\n"
-        "- Answer questions based on the document content provided.\n"
-        "- When referencing specific parts of the document, cite the relevant section or clause.\n"
-        "- If the answer is not in the document, say so clearly. Do not fabricate information.\n"
+        "You are a legal document assistant for commercial real estate lawyers doing due "
+        "diligence. Lawyers rely on your answers professionally, so every factual statement "
+        "must be traceable to the documents.\n\n"
+        'Documents are given in <document label="D1" ...> blocks. Page boundaries are marked '
+        "'--- Page N ---'.\n\n"
+        "CITATIONS:\n"
+        "- Support every factual claim with a citation straight after it, in exactly this "
+        'form: [[D1 p3: "exact quote"]]\n'
+        "- The quote is copied verbatim from that page of that document: a short span "
+        "(about 5-25 words) that proves the claim. Never paraphrase inside a quote, join "
+        "text from different pages, or use ellipses.\n"
+        "- The page is the number in the nearest '--- Page N ---' marker above the quote.\n"
+        "- Cite each claim separately; several citations in one sentence are fine.\n"
+        "- Only cite what is in the documents. If they don't answer the question, say so "
+        "plainly rather than citing something loosely related.\n\n"
+        "Format example (illustrative only, not from these documents):\n"
+        'The tenant needs consent to assign [[D2 p7: "not to assign the whole of the '
+        'Premises without the consent of the Landlord"]].\n\n'
+        "STYLE:\n"
         "- Be concise and precise. Lawyers value accuracy over verbosity.\n"
-        "- When you reference specific content, mention the section, clause, or page."
+        "- Mention clause or section numbers where they help the lawyer find the provision."
     ),
 )
+
+# Titles get a plain agent so they never inherit the citation instructions.
+title_agent = Agent("anthropic:claude-haiku-4-5-20251001")
 
 
 async def generate_title(user_message: str) -> str:
     """Generate a 3-5 word conversation title from the first user message."""
-    result = await agent.run(
+    result = await title_agent.run(
         f"Generate a concise 3-5 word title for a conversation that starts with: '{user_message}'. "
         "Return only the title, nothing else."
     )
@@ -53,7 +68,7 @@ async def chat_with_document(
     if document_text:
         prompt_parts.append(
             "The following is the content of the document being discussed:\n\n"
-            "<document>\n"
+            '<document label="D1">\n'
             f"{document_text}\n"
             "</document>\n"
         )
@@ -93,16 +108,3 @@ async def chat_with_document(
         async for text in result.stream_text(delta=True):
             yield text
 
-
-def count_sources_cited(response: str) -> int:
-    """Count the number of references to document sections, clauses, pages, etc."""
-    patterns = [
-        r"section\s+\d+",
-        r"clause\s+\d+",
-        r"page\s+\d+",
-        r"paragraph\s+\d+",
-    ]
-    count = 0
-    for pattern in patterns:
-        count += len(re.findall(pattern, response, re.IGNORECASE))
-    return count

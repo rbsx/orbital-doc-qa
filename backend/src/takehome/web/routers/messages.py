@@ -12,15 +12,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
 
-from takehome.db.models import Message
+from takehome.db.models import Document, Message
 from takehome.db.session import get_session
+from takehome.services.citations import extract_citations
 from takehome.services.conversation import (
     get_conversation,
     touch_conversation,
     update_conversation,
 )
 from takehome.services.document import get_document_for_conversation
-from takehome.services.llm import chat_with_document, count_sources_cited, generate_title
+from takehome.services.llm import chat_with_document, generate_title
 
 logger = structlog.get_logger()
 
@@ -32,15 +33,46 @@ router = APIRouter(tags=["messages"])
 # --------------------------------------------------------------------------- #
 
 
+class CitationOut(BaseModel):
+    document_id: str | None
+    label: str
+    page: int
+    quote: str
+    verified: bool
+
+
 class MessageOut(BaseModel):
     id: str
     conversation_id: str
     role: str
     content: str
     sources_cited: int
+    citations: list[CitationOut]
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+def message_out(message: Message, documents: list[Document]) -> MessageOut:
+    """Serialize a message, checking an assistant answer's citations against the documents.
+
+    Citations are verified on read rather than stored, so they always reflect the
+    documents currently in the conversation.
+    """
+    citations = (
+        [CitationOut(**vars(c)) for c in extract_citations(message.content, documents)]
+        if message.role == "assistant"
+        else []
+    )
+    return MessageOut(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        role=message.role,
+        content=message.content,
+        sources_cited=sum(c.verified for c in citations),
+        citations=citations,
+        created_at=message.created_at,
+    )
 
 
 class MessageCreate(BaseModel):
@@ -74,17 +106,7 @@ async def list_messages(
     result = await session.execute(stmt)
     messages = list(result.scalars().all())
 
-    return [
-        MessageOut(
-            id=m.id,
-            conversation_id=m.conversation_id,
-            role=m.role,
-            content=m.content,
-            sources_cited=m.sources_cited,
-            created_at=m.created_at,
-        )
-        for m in messages
-    ]
+    return [message_out(m, conversation.documents) for m in messages]
 
 
 @router.post("/api/conversations/{conversation_id}/messages")
@@ -115,6 +137,7 @@ async def send_message(
     # Load document text for the conversation
     document = await get_document_for_conversation(session, conversation_id)
     document_text: str | None = document.extracted_text if document else None
+    documents = list(conversation.documents)
 
     # Load conversation history (exclude the message we just saved, it will be the user_message param)
     stmt = (
@@ -163,8 +186,8 @@ async def send_message(
             event_data = json.dumps({"type": "content", "content": error_msg})
             yield f"data: {event_data}\n\n"
 
-        # Count sources cited in the full response
-        sources = count_sources_cited(full_response)
+        # Count the citations that check out against the documents
+        sources = sum(c.verified for c in extract_citations(full_response, documents))
 
         # Save the assistant message to the database.
         # We need a fresh session since the outer one may have been closed.
@@ -201,14 +224,7 @@ async def send_message(
             message_data = json.dumps(
                 {
                     "type": "message",
-                    "message": {
-                        "id": assistant_message.id,
-                        "conversation_id": assistant_message.conversation_id,
-                        "role": assistant_message.role,
-                        "content": assistant_message.content,
-                        "sources_cited": assistant_message.sources_cited,
-                        "created_at": assistant_message.created_at.isoformat(),
-                    },
+                    "message": message_out(assistant_message, documents).model_dump(mode="json"),
                 }
             )
             yield f"data: {message_data}\n\n"
