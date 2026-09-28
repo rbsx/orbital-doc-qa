@@ -25,7 +25,32 @@ function fold(char: string): string {
  */
 export type HighlightRanges = Map<number, [start: number, end: number]>;
 
+/**
+ * Table quotes arrive as several cells, "10,105", "938.8"; when the whole quote
+ * isn't on the page, highlight each cell instead.
+ */
 export function findQuoteInItems(
+	items: readonly string[],
+	quote: string,
+): HighlightRanges {
+	const whole = findContiguous(items, quote);
+	if (whole.size > 0) return whole;
+	const ranges: HighlightRanges = new Map();
+	for (const fragment of quote.split(/"\s*,\s*"/)) {
+		for (const [item, [start, end]] of findContiguous(items, fragment)) {
+			const span = ranges.get(item);
+			ranges.set(
+				item,
+				span
+					? [Math.min(span[0], start), Math.max(span[1], end)]
+					: [start, end],
+			);
+		}
+	}
+	return ranges;
+}
+
+function findContiguous(
 	items: readonly string[],
 	quote: string,
 ): HighlightRanges {
