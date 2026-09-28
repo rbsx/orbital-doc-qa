@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { ChatSidebar } from "./components/ChatSidebar";
 import { ChatWindow } from "./components/ChatWindow";
 import { DocumentViewer } from "./components/DocumentViewer";
@@ -6,6 +6,7 @@ import { TooltipProvider } from "./components/ui/tooltip";
 import { useConversations } from "./hooks/use-conversations";
 import { useDocument } from "./hooks/use-document";
 import { useMessages } from "./hooks/use-messages";
+import type { ViewerTarget } from "./types";
 
 export default function App() {
 	const {
@@ -34,6 +35,13 @@ export default function App() {
 		upload,
 		refresh: refreshDocument,
 	} = useDocument(selectedId);
+
+	// What the viewer shows (docs/CONTRACT.md §4). A fresh object per call, so
+	// clicking the same citation twice jumps back to it.
+	const [viewerTarget, setViewerTarget] = useState<ViewerTarget | null>(null);
+	const openSource = useCallback((target: ViewerTarget) => {
+		setViewerTarget({ ...target });
+	}, []);
 
 	const handleSend = useCallback(
 		async (content: string) => {
@@ -82,9 +90,10 @@ export default function App() {
 					conversationId={selectedId}
 					onSend={handleSend}
 					onUpload={handleUpload}
+					onOpenSource={openSource}
 				/>
 
-				<DocumentViewer document={document} />
+				<DocumentViewer document={document} target={viewerTarget} />
 			</div>
 		</TooltipProvider>
 	);

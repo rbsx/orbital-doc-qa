@@ -5,12 +5,13 @@ import {
 	FileText,
 	Loader2,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Document as PDFDocument, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { getDocumentUrl } from "../lib/api";
-import type { Document } from "../types";
+import { findQuoteInItems, renderHighlightedItem } from "../lib/highlight";
+import type { Document, ViewerTarget } from "../types";
 import { Button } from "./ui/button";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -24,9 +25,11 @@ const DEFAULT_WIDTH = 400;
 
 interface DocumentViewerProps {
 	document: Document | null;
+	// A citation (or other source) to jump to and highlight.
+	target?: ViewerTarget | null;
 }
 
-export function DocumentViewer({ document }: DocumentViewerProps) {
+export function DocumentViewer({ document, target }: DocumentViewerProps) {
 	const [numPages, setNumPages] = useState<number>(0);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [pdfLoading, setPdfLoading] = useState(true);
@@ -45,6 +48,44 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 		setPdfLoading(true);
 		setPdfError(null);
 	}
+
+	// Text items of the page on screen, used to find the quote in the text layer.
+	// Cleared on every page change so a stale page's text is never highlighted.
+	const [pageItems, setPageItems] = useState<string[]>([]);
+
+	// Jump to a new target on this document, remembering which quote to highlight.
+	const [appliedTarget, setAppliedTarget] = useState(target);
+	const [highlight, setHighlight] = useState<{
+		page: number;
+		quote: string;
+	} | null>(null);
+	if (target !== appliedTarget) {
+		setAppliedTarget(target);
+		if (target && target.documentId === document?.id) {
+			setCurrentPage(target.page);
+			setPageItems([]);
+			setHighlight(
+				target.quote ? { page: target.page, quote: target.quote } : null,
+			);
+		}
+	}
+
+	const activeQuote = highlight?.page === currentPage ? highlight.quote : null;
+	const highlightRanges = useMemo(
+		() => (activeQuote ? findQuoteInItems(pageItems, activeQuote) : null),
+		[pageItems, activeQuote],
+	);
+	const customTextRenderer = useCallback(
+		({ str, itemIndex }: { str: string; itemIndex: number }) =>
+			renderHighlightedItem(str, highlightRanges?.get(itemIndex)),
+		[highlightRanges],
+	);
+
+	const goToPage = (page: number) => {
+		setCurrentPage(page);
+		setPageItems([]);
+		setHighlight(null);
+	};
 
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
@@ -155,6 +196,19 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 					{!pdfLoading && !pdfError && (
 						<Page
 							pageNumber={currentPage}
+							onGetTextSuccess={({ items }) =>
+								setPageItems(
+									items.map((item) => ("str" in item ? item.str : "")),
+								)
+							}
+							customTextRenderer={
+								highlightRanges?.size ? customTextRenderer : undefined
+							}
+							onRenderTextLayerSuccess={() =>
+								containerRef.current
+									?.querySelector(".citation-highlight")
+									?.scrollIntoView({ block: "center", behavior: "smooth" })
+							}
 							width={pdfPageWidth}
 							loading={
 								<div className="flex items-center justify-center py-12">
@@ -175,7 +229,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 						className="h-7 w-7"
 						disabled={currentPage <= 1}
 						aria-label="Previous page"
-						onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+						onClick={() => goToPage(Math.max(1, currentPage - 1))}
 					>
 						<ChevronLeft className="h-4 w-4" />
 					</Button>
@@ -188,7 +242,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 						className="h-7 w-7"
 						disabled={currentPage >= numPages}
 						aria-label="Next page"
-						onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
+						onClick={() => goToPage(Math.min(numPages, currentPage + 1))}
 					>
 						<ChevronRight className="h-4 w-4" />
 					</Button>
