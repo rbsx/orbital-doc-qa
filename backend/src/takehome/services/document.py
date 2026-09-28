@@ -6,7 +6,7 @@ import uuid
 import fitz  # PyMuPDF
 import structlog
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from takehome.config import settings
@@ -24,12 +24,15 @@ async def upload_document(
     Validates the file is a PDF, saves it to disk, extracts text using PyMuPDF,
     and stores metadata in the database.
 
-    Raises ValueError if the conversation already has a document or the file is not a PDF.
+    Raises ValueError if the file is not a PDF, or if it would take the conversation
+    past its document or text limits (every document is sent with every question).
     """
-    # Check if conversation already has a document
-    existing = await list_documents_for_conversation(session, conversation_id)
-    if existing:
-        raise ValueError("Conversation already has a document. Only one document per conversation is allowed.")
+    existing_count, existing_chars = await _conversation_text_usage(session, conversation_id)
+    if existing_count >= settings.max_documents_per_conversation:
+        raise ValueError(
+            f"This conversation already has {existing_count} documents, the most it can hold. "
+            "Start a new conversation for further documents."
+        )
 
     # Validate file type
     if file.content_type not in ("application/pdf", "application/x-pdf"):
@@ -85,6 +88,15 @@ async def upload_document(
         text_length=len(extracted_text),
     )
 
+    if existing_chars + len(extracted_text) > settings.max_conversation_text_chars:
+        os.remove(file_path)
+        raise ValueError(
+            f"{original_filename} can't be added: the assistant reads every document in a "
+            "conversation at once, and this one would take the conversation past its limit "
+            f"of {settings.max_conversation_text_chars:,} characters of text. "
+            "Start a new conversation for it."
+        )
+
     # Create the document record
     document = Document(
         conversation_id=conversation_id,
@@ -113,3 +125,15 @@ async def list_documents_for_conversation(
     stmt = select(Document).where(Document.conversation_id == conversation_id)
     result = await session.execute(stmt)
     return sort_documents(result.scalars().all())
+
+
+async def _conversation_text_usage(
+    session: AsyncSession, conversation_id: str
+) -> tuple[int, int]:
+    """How many documents a conversation has and how much extracted text they hold."""
+    stmt = select(
+        func.count(Document.id),
+        func.coalesce(func.sum(func.length(Document.extracted_text)), 0),
+    ).where(Document.conversation_id == conversation_id)
+    count, chars = (await session.execute(stmt)).one()
+    return int(count), int(chars)
