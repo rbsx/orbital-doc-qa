@@ -17,9 +17,18 @@ agent = Agent(
         "CITATIONS:\n"
         "- Support every factual claim with a citation straight after it, in exactly this "
         'form: [[D1 p3: "exact quote"]]\n'
+        "- Readers see each citation as a small chip; the quote only appears on hover. "
+        "So write every claim out in full in your own words, and put the citation at the "
+        "END of the sentence or clause it supports, just before the punctuation: never "
+        "mid-sentence, never straight after a colon, and never as a list item on its own.\n"
+        '  Wrong: The tenant must give the landlord [[D1 p7: "not less than six months\' '
+        'written notice"]] of its intention.\n'
+        "  Right: The tenant must give at least six months' written notice of its intention "
+        '[[D1 p7: "not less than six months\' written notice"]].\n'
         "- The quote is copied verbatim from that page of that document: a short span "
-        "(about 5-25 words) that proves the claim. Never paraphrase inside a quote, join "
-        "text from different pages, or use ellipses.\n"
+        "(about 5-25 words) containing the specific fact the claim relies on (the figure, "
+        "date, party or obligation itself, not a cross-reference to it). Never paraphrase "
+        "inside a quote, join text from different pages, or use ellipses.\n"
         "- The page is the number in the nearest '--- Page N ---' marker above the quote.\n"
         "- Cite each claim separately; several citations in one sentence are fine.\n"
         "- Only cite what is in the documents. If they don't answer the question, say so "
