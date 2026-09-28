@@ -10,6 +10,8 @@ export interface PendingUpload {
 	filename: string;
 	status: "queued" | "uploading" | "error";
 	error?: string;
+	// Rejected because it needs a password to open, not because it's broken.
+	locked?: boolean;
 }
 
 export function useDocuments(conversationId: string | null) {
@@ -107,6 +109,9 @@ export function useDocuments(conversationId: string | null) {
 								err instanceof Error
 									? err.message
 									: "Failed to upload document",
+							locked:
+								err instanceof api.ApiError &&
+								err.code === "password_protected",
 						});
 					}
 				}
